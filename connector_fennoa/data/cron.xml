@@ -2,7 +2,7 @@
 <odoo>
     <record id="ir_cron_fennoa_payment_sync" model="ir.cron">
         <field name="name">Fennoa Payment Sync</field>
-        <field name="model_id" ref="model_fennoa_backend"/>
+        <field name="model_id" ref="model_fennoa_backend" />
         <field name="state">code</field>
         <field name="code">
             for backend in env['fennoa.backend'].search([]):

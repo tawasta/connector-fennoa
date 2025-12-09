@@ -43,11 +43,13 @@ class ResPartner(models.Model):
         string="Fennoa Customer ID",
         readonly=True,
         help="ID of the customer in Fennoa.",
+        index=True,
     )
     fennoa_customer_no = fields.Char(
         string="Fennoa Customer Number",
         readonly=True,
         help="Customer number in Fennoa.",
+        index=True,
     )
 
     def _get_fennoa_backend(self):

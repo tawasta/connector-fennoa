@@ -169,13 +169,28 @@ class FennoaBackend(models.Model):
     # -------------------------------------------------------------------------
 
     def action_import_customers(self):
-        """Fetch all customers from Fennoa and create them in Odoo."""
+        """Fetch all customers from Fennoa and create them in Odoo (via background job)."""
         self.ensure_one()
         response = self.api_get_customers(params={})
 
         customer_list = response.get("data") or []
 
-        self._import_fennoa_customers(customer_list)
+        if not customer_list:
+            _logger.info("Fennoa: no customers to import for backend %s", self.id)
+            return True
+
+        job_desc = _("Fennoa: import %(count)s customers for company %(company)s") % {
+            "count": len(customer_list),
+            "company": self.company_id.display_name,
+        }
+
+        self.with_delay(
+            description=job_desc,
+            priority=30,
+            max_retries=3,
+        )._import_fennoa_customers(customer_list)
+
+        return True
 
     def _import_fennoa_customers(self, customer_list):
         """Create missing Fennoa customers into Odoo."""

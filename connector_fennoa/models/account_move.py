@@ -41,6 +41,7 @@ class AccountMove(models.Model):
         string="Fennoa Invoice ID",
         readonly=True,
         help="ID of the invoice in Fennoa.",
+        index=True,
     )
 
     def _compute_fennoa_log_count(self):
@@ -211,7 +212,11 @@ class AccountMove(models.Model):
                     "id": move.id,
                 }
 
-                move.with_delay(description=job_desc)._fennoa_export_one_invoice()
+                move.with_delay(
+                    description=job_desc,
+                    priority=10,
+                    max_retries=5,
+                )._fennoa_export_one_invoice()
                 move.message_post(body=job_desc, subtype_xmlid="mail.mt_note")
 
         return True
