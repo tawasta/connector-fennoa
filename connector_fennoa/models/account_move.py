@@ -178,7 +178,6 @@ class AccountMove(models.Model):
             subtype_xmlid="mail.mt_note",
         )
 
-
     def action_fennoa_export_invoice(self):
         """
         Export (send) invoice(s) to Fennoa.
@@ -207,15 +206,15 @@ class AccountMove(models.Model):
         else:
             # Schedule one background job per invoice (queue_job / with_delay)
             for move in sale_moves:
-                job_desc = _(
-                    "Fennoa: send invoice %(name)s [Odoo ID: %(id)s]"
-                ) % {"name": move.name or move.display_name, "id": move.id}
+                job_desc = _("Fennoa: send invoice %(name)s [Odoo ID: %(id)s]") % {
+                    "name": move.name or move.display_name,
+                    "id": move.id,
+                }
 
                 move.with_delay(description=job_desc)._fennoa_export_one_invoice()
                 move.message_post(body=job_desc, subtype_xmlid="mail.mt_note")
 
         return True
-
 
     def _post(self, soft=True):
         """
@@ -224,9 +223,7 @@ class AccountMove(models.Model):
         """
         res = super()._post(soft)
 
-        sale_invoices = res.filtered(
-            lambda m: m.is_sale_document() and m.fennoa_send
-        )
+        sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_send)
         if sale_invoices:
             sale_invoices.action_fennoa_export_invoice()
 

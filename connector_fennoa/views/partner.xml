@@ -14,8 +14,13 @@
                     name="action_view_fennoa_logs"
                     type="object"
                     class="oe_stat_button"
-                    icon="fa-external-link">
-                    <field name="fennoa_log_count" widget="statinfo" string="Fennoa Logs"/>
+                    icon="fa-external-link"
+                >
+                    <field
+                        name="fennoa_log_count"
+                        widget="statinfo"
+                        string="Fennoa Logs"
+                    />
                 </button>
             </xpath>
         </field>

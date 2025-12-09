@@ -18,7 +18,7 @@ class ResPartner(models.Model):
             partner.fennoa_log_count = self.env["fennoa.binding"].search_count(
                 [("res_model", "=", "res.partner"), ("res_id", "=", partner.id)]
             )
-    
+
     def action_view_fennoa_logs(self):
         """Open Fennoa bindings related to this partner."""
         self.ensure_one()

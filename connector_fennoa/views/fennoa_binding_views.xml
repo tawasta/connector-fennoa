@@ -12,7 +12,7 @@
                 <field name="endpoint" />
                 <field name="status_code" />
                 <field name="successful" />
-                <field name="res_model"/>
+                <field name="res_model" />
             </tree>
         </field>
     </record>
@@ -29,8 +29,8 @@
                         <field name="endpoint" />
                         <field name="status_code" />
                         <field name="successful" />
-                        <field name="res_model"/>
-                        <field name="res_id"/>
+                        <field name="res_model" />
+                        <field name="res_id" />
                     </group>
                     <notebook>
                         <page name="payload" string="Payload">
@@ -54,13 +54,13 @@
         <field name="model">fennoa.binding</field>
         <field name="arch" type="xml">
             <search string="Fennoa Bindings">
-                <field name="backend_id"/>
-                <field name="method"/>
-                <field name="endpoint"/>
-                <field name="status_code"/>
-                <field name="successful"/>
-                <field name="res_model"/>
-                <field name="res_id"/>
+                <field name="backend_id" />
+                <field name="method" />
+                <field name="endpoint" />
+                <field name="status_code" />
+                <field name="successful" />
+                <field name="res_model" />
+                <field name="res_id" />
 
                 <group expand="0" string="Group By">
                     <filter
