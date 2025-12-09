@@ -37,8 +37,67 @@ class FennoaBackend(models.Model):
     )
     binding_ids = fields.One2many("fennoa.binding", "backend_id", readonly=True)
 
+    def action_import_customers(self):
+        """Fetch all customers from Fennoa and create them in Odoo."""
+        self.ensure_one()
+        response = self.api_get_customers(params={})
+
+        customer_list = response.get("data") or []
+
+        self._import_fennoa_customers(customer_list)
+
+    def _import_fennoa_customers(self, customer_list):
+        """Create missing Fennoa customers into Odoo."""
+        Partner = self.env["res.partner"]
+        for row in customer_list:
+            customer = row.get("Customer") or {}
+            if not customer:
+                continue
+
+            fennoa_id = customer.get("id")
+            if not fennoa_id:
+                continue
+
+            existing = Partner.search(
+                [
+                    "|",
+                    ("fennoa_customer_id", "=", fennoa_id),
+                    ("fennoa_customer_no", "=", customer.get("customer_no") or ""),
+                ],
+                limit=1,
+            )
+            if existing:
+                continue
+
+            country_code = customer.get("country_id") or ""
+            country = False
+            if country_code:
+                country = self.env["res.country"].search(
+                    [("code", "=", country_code)], limit=1
+                )
+
+            vals = {
+                "name": customer.get("name") or "",
+                "street": customer.get("address") or "",
+                "zip": customer.get("postalcode") or "",
+                "city": customer.get("city") or "",
+                "country_id": country.id if country else False,
+                "email": customer.get("email") or "",
+                "phone": customer.get("phone") or "",
+                "vat": customer.get("business_id") or "",
+                "comment": customer.get("description") or "",
+                "website": customer.get("website") or "",
+                "fennoa_customer_id": int(fennoa_id),
+                "fennoa_customer_no": customer.get("customer_no") or "",
+                "send_to_fennoa": True,
+                "company_id": self.company_id.id,
+            }
+
+            Partner.create(vals)
+
     @api.constrains("base_url")
     def _check_base_url(self):
+        """Ensure base_url starts with http/https."""
         for rec in self:
             if rec.base_url and not rec.base_url.startswith(("http://", "https://")):
                 raise ValidationError(
@@ -51,6 +110,7 @@ class FennoaBackend(models.Model):
         return (self.base_url or "").rstrip("/")
 
     def _build_auth(self):
+        """Return Fennoa API authentication tuple (username, password)."""
         self.ensure_one()
         raw = self.secret_key_b64 or ""
         password = raw
@@ -63,6 +123,7 @@ class FennoaBackend(models.Model):
         return (self.client_identifier, password)
 
     def _build_url(self, path):
+        """Build full request URL including base URL and path."""
         base = self._normalized_base_url()
         if not path.startswith("/"):
             path = "/" + path
@@ -77,13 +138,12 @@ class FennoaBackend(models.Model):
         form_payload=None,
         json_payload=None,
     ):
+        """Perform HTTP request to Fennoa API and log request/response."""
         self.ensure_one()
 
         url = self._build_url(path)
         auth = self._build_auth()
         headers = {"Accept": "application/json"}
-
-        _logger.info("Fennoa request %s %s", method.upper(), url)
 
         try:
             kwargs = {
@@ -133,18 +193,36 @@ class FennoaBackend(models.Model):
         return success, status, body, parsed
 
     def action_test_connection(self):
+        """Test API access by calling GET /customer_api."""
         for backend in self:
             success, status, body, _parsed = backend._send_request(
-                "GET", "/customer_api/"
+                "GET",
+                "/customer_api/",
             )
+
             if not success:
                 raise UserError(
                     _("Fennoa API test failed.\nStatus: %s\nResponse: %s")
                     % (status, body)
                 )
-        return True
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Success"),
+                "message": _("Fennoa API test succeeded."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
+    # -------------------------------------------------------------------------
+    # API: Customers
+    # -------------------------------------------------------------------------
 
     def api_create_customer(self, customer_data):
+        """Create a new customer in Fennoa using FORM DATA."""
         self.ensure_one()
 
         success, status, body, parsed = self._send_request(
@@ -159,6 +237,114 @@ class FennoaBackend(models.Model):
                 extra = "\nErrors: %s" % parsed.get("errors")
             raise UserError(
                 _("Unable to add customer to Fennoa.\nStatus: %s\nResponse: %s%s")
+                % (status, body, extra)
+            )
+
+        return parsed or {}
+
+    def api_update_customer(self, customer_no, update_data):
+        """Update existing customer in Fennoa using JSON."""
+        self.ensure_one()
+
+        path = f"/customer_api/{customer_no}"
+        success, status, body, parsed = self._send_request(
+            "PUT",
+            path,
+            json_payload=update_data,
+        )
+
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+            raise UserError(
+                _("Unable to update customer in Fennoa.\nStatus: %s\nResponse: %s%s")
+                % (status, body, extra)
+            )
+
+        return parsed or {}
+
+    def api_get_customer_by_id(self, customer_id):
+        """Fetch customer details by Fennoa internal ID."""
+        self.ensure_one()
+
+        path = f"/customer_api/{customer_id}"
+        success, status, body, parsed = self._send_request("GET", path)
+
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+            raise UserError(
+                _("Unable to fetch customer from Fennoa.\nStatus: %s\nResponse: %s%s")
+                % (status, body, extra)
+            )
+
+        return parsed or {}
+
+    def api_get_customer_by_number(self, customer_no):
+        """Fetch customer by external customer number."""
+        self.ensure_one()
+
+        path = f"/customer_api/get/customer_no/{customer_no}"
+        success, status, body, parsed = self._send_request("GET", path)
+
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+            raise UserError(
+                _("Unable to fetch customer from Fennoa.\nStatus: %s\nResponse: %s%s")
+                % (status, body, extra)
+            )
+
+        return parsed or {}
+
+    def api_get_customers(self, params=None):
+        """Fetch list of customers from Fennoa."""
+        self.ensure_one()
+
+        path = "/customer_api/"
+        success, status, body, parsed = self._send_request(
+            "GET",
+            path,
+            params=params,
+        )
+
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+            raise UserError(
+                _("Unable to fetch customers from Fennoa.\nStatus: %s\nResponse: %s%s")
+                % (status, body, extra)
+            )
+
+        return parsed or {}
+
+    # -------------------------------------------------------------------------
+    # API: Sales Invoices
+    # -------------------------------------------------------------------------
+
+    def api_create_sales_invoice(self, invoice_data):
+        """Send a new sales invoice to Fennoa (FORM DATA)."""
+        self.ensure_one()
+
+        success, status, body, parsed = self._send_request(
+            "POST",
+            "/sales_api/add",
+            form_payload=invoice_data,
+        )
+
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+            raise UserError(
+                _(
+                    "Unable to add sales invoice to Fennoa.\n"
+                    "Status: %s\nResponse: %s%s"
+                )
                 % (status, body, extra)
             )
 
