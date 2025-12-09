@@ -1,5 +1,8 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class ResPartner(models.Model):
@@ -7,6 +10,7 @@ class ResPartner(models.Model):
 
     send_to_fennoa = fields.Boolean(
         string="Send to Fennoa",
+        default=True,
         help=(
             "If enabled, this customer will be created/updated in Fennoa when an "
             "outgoing invoice is created."
@@ -24,7 +28,9 @@ class ResPartner(models.Model):
     )
 
     def _get_fennoa_backend(self):
+        """Return available Fennoa backend for the partner's company."""
         self.ensure_one()
+        _logger.info("Company for partner %s: %s", self.id, self.company_id.id)
         backend = self.env["fennoa.backend"].search(
             [("company_id", "=", self.company_id.id)],
             limit=1,
@@ -33,6 +39,7 @@ class ResPartner(models.Model):
 
     @api.model
     def _fennoa_build_customer_payload(self, partner):
+        """Create FORM DATA payload structure to send partner as a customer to Fennoa."""
         if not partner:
             raise UserError(_("No partner given for Fennoa payload build."))
 
@@ -57,7 +64,6 @@ class ResPartner(models.Model):
             "description": partner.comment or "",
             "email": partner.email or "",
             "phone": partner.phone or "",
-            "fax": partner.fax or "",
             "website": partner.website or "",
             "business_id": partner.vat or "",
             "account_type_id": 1 if partner.is_company else 2,
@@ -67,6 +73,7 @@ class ResPartner(models.Model):
 
     @api.model
     def _fennoa_ensure_customer(self, partner):
+        """If partner should be synced and is not yet in Fennoa → create it there."""
         if not partner:
             raise UserError(_("No partner given for Fennoa ensure customer."))
 
@@ -88,9 +95,12 @@ class ResPartner(models.Model):
         payload = self._fennoa_build_customer_payload(partner)
         result = backend.api_create_customer(payload)
 
+        partner_data = result.get("data") or []
+        customer = partner_data.get("Customer") or {}
+
         partner.write(
             {
-                "fennoa_customer_id": result.get("id") or 0,
-                "fennoa_customer_no": result.get("customer_no") or "",
+                "fennoa_customer_id": customer.get("id") or 0,
+                "fennoa_customer_no": customer.get("customer_no") or "",
             }
         )
