@@ -45,7 +45,6 @@ class FennoaBackend(models.Model):
                     _("Fennoa base URL must start with http:// or https://.")
                 )
 
-
     def _normalized_base_url(self):
         """Return base_url without trailing slash."""
         self.ensure_one()
