@@ -31,9 +31,18 @@
                         <field name="status_code" />
                         <field name="successful" />
                     </group>
-                    <group string="Response">
-                        <field name="response" nolabel="1" />
-                    </group>
+                    <notebook>
+                        <page name="payload" string="Payload">
+                            <group>
+                                <field name="payload" widget="code" />
+                            </group>
+                        </page>
+                        <page name="response" string="Response">
+                            <group>
+                                <field name="response" widget="code" />
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
