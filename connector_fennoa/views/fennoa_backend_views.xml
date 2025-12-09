@@ -6,12 +6,12 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <!-- <button
+                    <button
                         name="action_test_connection"
                         type="object"
                         string="Test Connection"
                         class="btn-primary"
-                    /> -->
+                    />
                 </header>
                 <sheet>
                     <group>
