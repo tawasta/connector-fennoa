@@ -1,3 +1,4 @@
+from datetime import timedelta
 import base64
 import json
 import logging
@@ -36,64 +37,6 @@ class FennoaBackend(models.Model):
         default=lambda self: self.env.company,
     )
     binding_ids = fields.One2many("fennoa.binding", "backend_id", readonly=True)
-
-    def action_import_customers(self):
-        """Fetch all customers from Fennoa and create them in Odoo."""
-        self.ensure_one()
-        response = self.api_get_customers(params={})
-
-        customer_list = response.get("data") or []
-
-        self._import_fennoa_customers(customer_list)
-
-    def _import_fennoa_customers(self, customer_list):
-        """Create missing Fennoa customers into Odoo."""
-        Partner = self.env["res.partner"]
-        for row in customer_list:
-            customer = row.get("Customer") or {}
-            if not customer:
-                continue
-
-            fennoa_id = customer.get("id")
-            if not fennoa_id:
-                continue
-
-            existing = Partner.search(
-                [
-                    "|",
-                    ("fennoa_customer_id", "=", fennoa_id),
-                    ("fennoa_customer_no", "=", customer.get("customer_no") or ""),
-                ],
-                limit=1,
-            )
-            if existing:
-                continue
-
-            country_code = customer.get("country_id") or ""
-            country = False
-            if country_code:
-                country = self.env["res.country"].search(
-                    [("code", "=", country_code)], limit=1
-                )
-
-            vals = {
-                "name": customer.get("name") or "",
-                "street": customer.get("address") or "",
-                "zip": customer.get("postalcode") or "",
-                "city": customer.get("city") or "",
-                "country_id": country.id if country else False,
-                "email": customer.get("email") or "",
-                "phone": customer.get("phone") or "",
-                "vat": customer.get("business_id") or "",
-                "comment": customer.get("description") or "",
-                "website": customer.get("website") or "",
-                "fennoa_customer_id": int(fennoa_id),
-                "fennoa_customer_no": customer.get("customer_no") or "",
-                "send_to_fennoa": True,
-                "company_id": self.company_id.id,
-            }
-
-            Partner.create(vals)
 
     @api.constrains("base_url")
     def _check_base_url(self):
@@ -220,6 +163,68 @@ class FennoaBackend(models.Model):
                 "sticky": False,
             },
         }
+
+    # -------------------------------------------------------------------------
+    # API: GET Customers
+    # -------------------------------------------------------------------------
+
+    def action_import_customers(self):
+        """Fetch all customers from Fennoa and create them in Odoo."""
+        self.ensure_one()
+        response = self.api_get_customers(params={})
+
+        customer_list = response.get("data") or []
+
+        self._import_fennoa_customers(customer_list)
+
+    def _import_fennoa_customers(self, customer_list):
+        """Create missing Fennoa customers into Odoo."""
+        Partner = self.env["res.partner"]
+        for row in customer_list:
+            customer = row.get("Customer") or {}
+            if not customer:
+                continue
+
+            fennoa_id = customer.get("id")
+            if not fennoa_id:
+                continue
+
+            existing = Partner.search(
+                [
+                    "|",
+                    ("fennoa_customer_id", "=", fennoa_id),
+                    ("fennoa_customer_no", "=", customer.get("customer_no") or ""),
+                ],
+                limit=1,
+            )
+            if existing:
+                continue
+
+            country_code = customer.get("country_id") or ""
+            country = False
+            if country_code:
+                country = self.env["res.country"].search(
+                    [("code", "=", country_code)], limit=1
+                )
+
+            vals = {
+                "name": customer.get("name") or "",
+                "street": customer.get("address") or "",
+                "zip": customer.get("postalcode") or "",
+                "city": customer.get("city") or "",
+                "country_id": country.id if country else False,
+                "email": customer.get("email") or "",
+                "phone": customer.get("phone") or "",
+                "vat": customer.get("business_id") or "",
+                "comment": customer.get("description") or "",
+                "website": customer.get("website") or "",
+                "fennoa_customer_id": int(fennoa_id),
+                "fennoa_customer_no": customer.get("customer_no") or "",
+                "send_to_fennoa": True,
+                "company_id": self.company_id.id,
+            }
+
+            Partner.create(vals)
 
     # -------------------------------------------------------------------------
     # API: Customers
@@ -358,23 +363,145 @@ class FennoaBackend(models.Model):
 
         return parsed or {}
 
-    def api_create_payment(self, payment_data):
-        """Send a new payment to Fennoa (FORM DATA)."""
+    # -------------------------------------------------------------------------
+    # API: Sales invoice payments
+    # -------------------------------------------------------------------------
+
+    def _format_fennoa_date(self, value, field_name):
+        """Format a date/datetime/string to YYYY-MM-DD for Fennoa API."""
+        if hasattr(value, "strftime"):
+            return value.strftime("%Y-%m-%d")
+        if isinstance(value, str):
+            return value
+        raise UserError(
+            _("Invalid value for %(field)s in Fennoa payment query: %(value)s")
+            % {"field": field_name, "value": value}
+        )
+
+    def api_get_sales_payments(self, from_date, to_date, created_after=None):
+        """
+        Fetch a list of payments to sales invoices from Fennoa.
+
+        Wraps GET /sales_api/get/payments/<from_date>/<to_date>
+        with optional /created_after:<date> suffix.
+        """
         self.ensure_one()
 
-        success, status, body, parsed = self._send_request(
-            "POST",
-            "/payment_api/add",
-            form_payload=payment_data,
-        )
+        from_str = self._format_fennoa_date(from_date, "from_date")
+        to_str = self._format_fennoa_date(to_date, "to_date")
+
+        path = f"/sales_api/get/payments/{from_str}/{to_str}"
+        if created_after:
+            created_str = self._format_fennoa_date(created_after, "created_after")
+            path = f"{path}/created_after:{created_str}"
+
+        success, status, body, parsed = self._send_request("GET", path)
 
         if not success:
             extra = ""
             if parsed and isinstance(parsed, dict) and parsed.get("errors"):
                 extra = "\nErrors: %s" % parsed.get("errors")
             raise UserError(
-                _("Unable to add payment to Fennoa.\nStatus: %s\nResponse: %s%s")
+                _(
+                    "Unable to fetch sales payments from Fennoa.\n"
+                    "Status: %s\nResponse: %s%s"
+                )
                 % (status, body, extra)
             )
 
         return parsed or {}
+
+    def action_sync_payments(self, from_date=None, to_date=None, created_after=None):
+        """
+        Import Fennoa sales payments and apply them to invoices in Odoo.
+
+        Designed to be called by a cron job and can also be run manually.
+        """
+        self.ensure_one()
+        Move = self.env["account.move"]
+        Payment = self.env["account.payment"]
+
+        # Default date range: last 7 days if not provided
+        if not from_date:
+            from_date = (fields.Date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+        if not to_date:
+            to_date = fields.Date.today().strftime("%Y-%m-%d")
+
+        result = self.api_get_sales_payments(
+            from_date=from_date, to_date=to_date, created_after=created_after
+        )
+        _logger.info("RESULT: %s", result)
+
+        payments = result.get("data") or []
+
+        for payment_entry in payments:
+            payment_data = payment_entry.get("SalesInvoicePayment") or {}
+            invoice_data = payment_entry.get("SalesInvoice") or {}
+
+            if not payment_data or not invoice_data:
+                continue
+
+            fennoa_payment_id = payment_data.get("id")
+            fennoa_invoice_id = invoice_data.get("id")
+
+            if not fennoa_payment_id or not fennoa_invoice_id:
+                continue
+
+            PaymentExists = Payment.search(
+                [
+                    ("fennoa_payment_id", "=", int(fennoa_payment_id)),
+                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
+                    ("company_id", "=", self.company_id.id),
+                ],
+                limit=1,
+            )
+            if PaymentExists:
+                _logger.info(
+                    "Payment for Fennoa payment ID %s already exists in Odoo, skipping.",
+                    fennoa_payment_id,
+                )
+                continue
+
+            move = Move.search(
+                [
+                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
+                    ("company_id", "=", self.company_id.id),
+                    ("move_type", "in", ("out_invoice", "out_refund")),
+                ],
+                limit=1,
+            )
+
+            if move:
+                ctx = {
+                    "active_model": "account.move",
+                    "active_ids": move.ids,
+                }
+                wizard = (
+                    self.env["account.payment.register"]
+                    .with_context(ctx)
+                    .create(
+                        {
+                            "payment_date": payment_data.get("date")
+                            or fields.Date.today().strftime("%Y-%m-%d"),
+                            "amount": float(payment_data.get("sum") or 0.0),
+                            "communication": invoice_data.get("banking_reference")
+                            or "",
+                        }
+                    )
+                )
+
+                odoo_payments = wizard._create_payments()
+
+                # Tag payments with Fennoa ids
+                for pay in odoo_payments:
+                    pay.write(
+                        {
+                            "fennoa_payment_id": int(payment_data.get("id")),
+                            "fennoa_invoice_id": int(invoice_data.get("id")),
+                        }
+                    )
+                _logger.info(
+                    "Created Odoo payments for Fennoa payment ID %s: %s",
+                    fennoa_payment_id,
+                    odoo_payments,
+                )
