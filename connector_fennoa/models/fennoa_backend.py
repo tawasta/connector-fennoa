@@ -137,6 +137,8 @@ class FennoaBackend(models.Model):
         params=None,
         form_payload=None,
         json_payload=None,
+        related_model=None,
+        related_id=None,
     ):
         """Perform HTTP request to Fennoa API and log request/response."""
         self.ensure_one()
@@ -187,6 +189,8 @@ class FennoaBackend(models.Model):
                 "response": body,
                 "status_code": status or 0,
                 "successful": success,
+                "res_model": related_model,
+                "res_id": related_id,
             }
         )
 
@@ -221,7 +225,7 @@ class FennoaBackend(models.Model):
     # API: Customers
     # -------------------------------------------------------------------------
 
-    def api_create_customer(self, customer_data):
+    def api_create_customer(self, customer_data, partner=None):
         """Create a new customer in Fennoa using FORM DATA."""
         self.ensure_one()
 
@@ -229,6 +233,8 @@ class FennoaBackend(models.Model):
             "POST",
             "/customer_api/add",
             form_payload=customer_data,
+            related_model=partner._name if partner else None,
+            related_id=partner.id if partner else None,
         )
 
         if not success:
@@ -326,7 +332,7 @@ class FennoaBackend(models.Model):
     # API: Sales Invoices
     # -------------------------------------------------------------------------
 
-    def api_create_sales_invoice(self, invoice_data):
+    def api_create_sales_invoice(self, invoice_data, move=None):
         """Send a new sales invoice to Fennoa (FORM DATA)."""
         self.ensure_one()
 
@@ -334,6 +340,8 @@ class FennoaBackend(models.Model):
             "POST",
             "/sales_api/add",
             form_payload=invoice_data,
+            related_model=move._name if move else None,
+            related_id=move.id if move else None,
         )
 
         if not success:
@@ -345,6 +353,27 @@ class FennoaBackend(models.Model):
                     "Unable to add sales invoice to Fennoa.\n"
                     "Status: %s\nResponse: %s%s"
                 )
+                % (status, body, extra)
+            )
+
+        return parsed or {}
+
+    def api_create_payment(self, payment_data):
+        """Send a new payment to Fennoa (FORM DATA)."""
+        self.ensure_one()
+
+        success, status, body, parsed = self._send_request(
+            "POST",
+            "/payment_api/add",
+            form_payload=payment_data,
+        )
+
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+            raise UserError(
+                _("Unable to add payment to Fennoa.\nStatus: %s\nResponse: %s%s")
                 % (status, body, extra)
             )
 

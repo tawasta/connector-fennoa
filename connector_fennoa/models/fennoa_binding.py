@@ -14,3 +14,6 @@ class FennoaBinding(models.Model):
     response = fields.Text()
     status_code = fields.Integer()
     successful = fields.Boolean()
+
+    res_model = fields.Char(string="Related Model", readonly=True)
+    res_id = fields.Integer(string="Related Record ID", readonly=True)

@@ -37,6 +37,7 @@
         "security/ir.model.access.csv",
         "views/fennoa_backend_views.xml",
         "views/fennoa_binding_views.xml",
+        "views/move.xml",
         "views/partner.xml",
     ],
 }

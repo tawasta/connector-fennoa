@@ -9,6 +9,29 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
+    fennoa_log_count = fields.Integer(
+        string="Fennoa Logs",
+        compute="_compute_fennoa_log_count",
+    )
+
+    def _compute_fennoa_log_count(self):
+        for move in self:
+            move.fennoa_log_count = self.env["fennoa.binding"].search_count(
+                [("res_model", "=", "account.move"), ("res_id", "=", move.id)]
+            )
+    
+    def action_view_fennoa_logs(self):
+        """Open Fennoa bindings related to this invoice."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Fennoa Logs"),
+            "res_model": "fennoa.binding",
+            "view_mode": "tree,form",
+            "domain": [("res_model", "=", "account.move"), ("res_id", "=", self.id)],
+            "context": {"default_res_model": "account.move", "default_res_id": self.id},
+        }
+
     def _fennoa_build_sales_invoice_payload(self):
         """Build FORM DATA payload for sending the sales invoice to Fennoa."""
         self.ensure_one()
@@ -93,7 +116,7 @@ class AccountMove(models.Model):
                 limit=1,
             )
 
-            result = backend.api_create_sales_invoice(payload)
+            result = backend.api_create_sales_invoice(payload, move=move)
             _logger.info(
                 "Fennoa sales invoice created for move %s: %s", move.id, result
             )
