@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
 
-    <!-- Tree view -->
     <record id="view_fennoa_binding_tree" model="ir.ui.view">
         <field name="name">fennoa.binding.tree</field>
         <field name="model">fennoa.binding</field>
@@ -13,11 +12,11 @@
                 <field name="endpoint" />
                 <field name="status_code" />
                 <field name="successful" />
+                <field name="res_model"/>
             </tree>
         </field>
     </record>
 
-    <!-- Form view -->
     <record id="view_fennoa_binding_form" model="ir.ui.view">
         <field name="name">fennoa.binding.form</field>
         <field name="model">fennoa.binding</field>
@@ -30,6 +29,8 @@
                         <field name="endpoint" />
                         <field name="status_code" />
                         <field name="successful" />
+                        <field name="res_model"/>
+                        <field name="res_id"/>
                     </group>
                     <notebook>
                         <page name="payload" string="Payload">
@@ -48,7 +49,50 @@
         </field>
     </record>
 
-    <!-- Action -->
+    <record id="view_fennoa_binding_search" model="ir.ui.view">
+        <field name="name">fennoa.binding.search</field>
+        <field name="model">fennoa.binding</field>
+        <field name="arch" type="xml">
+            <search string="Fennoa Bindings">
+                <field name="backend_id"/>
+                <field name="method"/>
+                <field name="endpoint"/>
+                <field name="status_code"/>
+                <field name="successful"/>
+                <field name="res_model"/>
+                <field name="res_id"/>
+
+                <group expand="0" string="Group By">
+                    <filter
+                        name="group_by_backend"
+                        string="Backend"
+                        context="{'group_by': 'backend_id'}"
+                    />
+                    <filter
+                        name="group_by_method"
+                        string="Method"
+                        context="{'group_by': 'method'}"
+                    />
+                    <filter
+                        name="group_by_model"
+                        string="Related Model"
+                        context="{'group_by': 'res_model'}"
+                    />
+                    <filter
+                        name="group_by_success"
+                        string="Successful"
+                        context="{'group_by': 'successful'}"
+                    />
+                    <filter
+                        name="group_by_create_date"
+                        string="Creation Date"
+                        context="{'group_by': 'create_date'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="action_fennoa_binding" model="ir.actions.act_window">
         <field name="name">Fennoa Bindings</field>
         <field name="res_model">fennoa.binding</field>
