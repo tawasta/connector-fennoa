@@ -14,6 +14,12 @@ class AccountMove(models.Model):
         compute="_compute_fennoa_log_count",
     )
 
+    fennoa_invoice_id = fields.Integer(
+        string="Fennoa Invoice ID",
+        readonly=True,
+        help="ID of the invoice in Fennoa.",
+    )
+
     def _compute_fennoa_log_count(self):
         for move in self:
             move.fennoa_log_count = self.env["fennoa.binding"].search_count(
@@ -117,8 +123,12 @@ class AccountMove(models.Model):
             )
 
             result = backend.api_create_sales_invoice(payload, move=move)
-            _logger.info(
-                "Fennoa sales invoice created for move %s: %s", move.id, result
-            )
+            fennoa_id = result.get("id")
+            try:
+                fennoa_id = int(fennoa_id)
+            except Exception:
+                fennoa_id = 0
+
+            move.write({"fennoa_invoice_id": fennoa_id})
 
         return moves

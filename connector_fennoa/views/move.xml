@@ -15,6 +15,9 @@
                     <field name="fennoa_log_count" widget="statinfo" string="Fennoa Logs"/>
                 </button>
             </xpath>
+            <field name="ref" position="after">
+                <field name="fennoa_invoice_id"/>
+            </field>
         </field>
     </record>
 </odoo>
