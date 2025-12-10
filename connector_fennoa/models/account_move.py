@@ -85,6 +85,27 @@ class AccountMove(models.Model):
                 _("Invoice date and due date must be set before sending to Fennoa.")
             )
 
+        delivery_method = "postal"
+        einvoice_address = ""
+        einvoice_operator = ""
+
+        if self.transmit_method_id and self.transmit_method_id.code:
+            code = self.transmit_method_id.code.lower()
+            if code == "einvoice":
+                delivery_method = "finvoice"
+                einvoice_address = partner.edicode or ""
+                einvoice_operator = (
+                    partner.einvoice_operator_id.name
+                    if partner.einvoice_operator_id
+                    else ""
+                )
+            elif code == "mail":
+                delivery_method = "email"
+                einvoice_address = partner.email or ""
+                einvoice_operator = ""
+            elif code == "post":
+                delivery_method = "postal"
+
         payload = {
             "customer_no": partner.fennoa_customer_no or "",
             "account_type_id": 1 if partner.is_company else 2,
@@ -103,6 +124,9 @@ class AccountMove(models.Model):
             "banking_reference": self.payment_reference or "",
             "our_reference": self.invoice_user_id.name or "",
             "your_reference": self.ref or "",
+            "einvoice_address": einvoice_address,
+            "einvoice_operator": einvoice_operator,
+            "delivery_method": delivery_method,
         }
         # TODO: Add additional fields based on full Fennoa documentation.
 
@@ -114,12 +138,20 @@ class AccountMove(models.Model):
                 # Only first VAT in list used (Fennoa only supports one per line)
                 vatpercent = line.tax_ids[0].amount or 0.0
 
+            # For credit notes (out_refund), Fennoa expects the total sum to be negative.
+            qty = line.quantity or 0.0
+            price = line.price_unit or 0.0
+            if self.move_type == "out_refund":
+                # Recommended: negative quantity with positive unit price.
+                qty = -abs(qty)
+                price = abs(price)
+
             payload[f"row[{i}][name]"] = (
                 line.product_id.display_name if line.product_id else (line.name or "")
             )
             payload[f"row[{i}][description]"] = line.name or ""
-            payload[f"row[{i}][price]"] = str(line.price_unit)
-            payload[f"row[{i}][quantity]"] = str(line.quantity)
+            payload[f"row[{i}][price]"] = str(price)
+            payload[f"row[{i}][quantity]"] = str(qty)
             payload[f"row[{i}][unit]"] = (
                 line.product_uom_id.name if line.product_uom_id else ""
             )
