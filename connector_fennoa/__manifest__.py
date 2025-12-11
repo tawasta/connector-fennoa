@@ -36,7 +36,8 @@
     ],
     "data": [
         "security/ir_model_access.xml",
-        "data/queue_channel.xml",
+        "data/queue_job_channel.xml",
+        "data/queue_job_function.xml",
         "data/cron.xml",
         "views/account_move.xml",
         "views/account_payment.xml",

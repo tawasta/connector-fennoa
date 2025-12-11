@@ -44,7 +44,7 @@ Payment import
 --------------
 
 * The cron job *Fennoa Payment Sync* calls the backend method
-  ``action_sync_payments`` every hour.
+  ``action_import_payments`` every hour.
 * The connector fetches sales invoice payments from Fennoa for a given
   date range and:
 

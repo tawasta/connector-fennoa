@@ -205,7 +205,129 @@ class FennoaBackend(models.Model):
             max_retries=3,
         )._import_fennoa_customers(customer_list)
 
-        return True
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Import started"),
+                "message": _("Importing customers in the background..."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
+    def _cron_import_payments(self):
+        """
+        Helper method to run payment import for all backends via cron job.
+        """
+        for backend in self.env["fennoa.backend"].sudo().search([]):
+            backend.action_import_payments()
+
+    def action_import_payments(self, from_date=None, to_date=None, created_after=None):
+        """
+        Import Fennoa sales payments and apply them to invoices in Odoo.
+
+        Designed to be called by a cron job and can also be run manually.
+        """
+        self.ensure_one()
+        Move = self.env["account.move"]
+        Payment = self.env["account.payment"]
+
+        # Default date range: last 7 days if not provided
+        if not from_date:
+            from_date = (fields.Date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+        if not to_date:
+            to_date = fields.Date.today().strftime("%Y-%m-%d")
+
+        result = self.api_get_sales_payments(
+            from_date=from_date, to_date=to_date, created_after=created_after
+        )
+        _logger.info("RESULT: %s", result)
+
+        payments = result.get("data") or []
+
+        for payment_entry in payments:
+            payment_data = payment_entry.get("SalesInvoicePayment") or {}
+            invoice_data = payment_entry.get("SalesInvoice") or {}
+
+            if not payment_data or not invoice_data:
+                continue
+
+            fennoa_payment_id = payment_data.get("id")
+            fennoa_invoice_id = invoice_data.get("id")
+
+            if not fennoa_payment_id or not fennoa_invoice_id:
+                continue
+
+            PaymentExists = Payment.search(
+                [
+                    ("fennoa_payment_id", "=", int(fennoa_payment_id)),
+                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
+                    ("company_id", "=", self.company_id.id),
+                ],
+                limit=1,
+            )
+            if PaymentExists:
+                _logger.info(
+                    "Payment for Fennoa payment ID %s already exists in Odoo, skipping.",
+                    fennoa_payment_id,
+                )
+                continue
+
+            move = Move.search(
+                [
+                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
+                    ("company_id", "=", self.company_id.id),
+                    ("move_type", "in", ("out_invoice", "out_refund")),
+                ],
+                limit=1,
+            )
+
+            if move:
+                ctx = {
+                    "active_model": "account.move",
+                    "active_ids": move.ids,
+                }
+                wizard = (
+                    self.env["account.payment.register"]
+                    .with_context(ctx)
+                    .create(
+                        {
+                            "payment_date": payment_data.get("date")
+                            or fields.Date.today().strftime("%Y-%m-%d"),
+                            "amount": float(payment_data.get("sum") or 0.0),
+                            "communication": invoice_data.get("banking_reference")
+                            or "",
+                        }
+                    )
+                )
+
+                odoo_payments = wizard._create_payments()
+
+                # Tag payments with Fennoa ids
+                for pay in odoo_payments:
+                    pay.write(
+                        {
+                            "fennoa_payment_id": int(payment_data.get("id")),
+                            "fennoa_invoice_id": int(invoice_data.get("id")),
+                        }
+                    )
+                _logger.info(
+                    "Created Odoo payments for Fennoa payment ID %s: %s",
+                    fennoa_payment_id,
+                    odoo_payments,
+                )
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Import started"),
+                "message": _("Importing payments in the background..."),
+                "type": "success",
+                "sticky": False,
+            },
+        }                
 
     # endregion actions
 
@@ -443,100 +565,5 @@ class FennoaBackend(models.Model):
             )
 
         return parsed or {}
-
-    def action_sync_payments(self, from_date=None, to_date=None, created_after=None):
-        """
-        Import Fennoa sales payments and apply them to invoices in Odoo.
-
-        Designed to be called by a cron job and can also be run manually.
-        """
-        self.ensure_one()
-        Move = self.env["account.move"]
-        Payment = self.env["account.payment"]
-
-        # Default date range: last 7 days if not provided
-        if not from_date:
-            from_date = (fields.Date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
-        if not to_date:
-            to_date = fields.Date.today().strftime("%Y-%m-%d")
-
-        result = self.api_get_sales_payments(
-            from_date=from_date, to_date=to_date, created_after=created_after
-        )
-        _logger.info("RESULT: %s", result)
-
-        payments = result.get("data") or []
-
-        for payment_entry in payments:
-            payment_data = payment_entry.get("SalesInvoicePayment") or {}
-            invoice_data = payment_entry.get("SalesInvoice") or {}
-
-            if not payment_data or not invoice_data:
-                continue
-
-            fennoa_payment_id = payment_data.get("id")
-            fennoa_invoice_id = invoice_data.get("id")
-
-            if not fennoa_payment_id or not fennoa_invoice_id:
-                continue
-
-            PaymentExists = Payment.search(
-                [
-                    ("fennoa_payment_id", "=", int(fennoa_payment_id)),
-                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
-                    ("company_id", "=", self.company_id.id),
-                ],
-                limit=1,
-            )
-            if PaymentExists:
-                _logger.info(
-                    "Payment for Fennoa payment ID %s already exists in Odoo, skipping.",
-                    fennoa_payment_id,
-                )
-                continue
-
-            move = Move.search(
-                [
-                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
-                    ("company_id", "=", self.company_id.id),
-                    ("move_type", "in", ("out_invoice", "out_refund")),
-                ],
-                limit=1,
-            )
-
-            if move:
-                ctx = {
-                    "active_model": "account.move",
-                    "active_ids": move.ids,
-                }
-                wizard = (
-                    self.env["account.payment.register"]
-                    .with_context(ctx)
-                    .create(
-                        {
-                            "payment_date": payment_data.get("date")
-                            or fields.Date.today().strftime("%Y-%m-%d"),
-                            "amount": float(payment_data.get("sum") or 0.0),
-                            "communication": invoice_data.get("banking_reference")
-                            or "",
-                        }
-                    )
-                )
-
-                odoo_payments = wizard._create_payments()
-
-                # Tag payments with Fennoa ids
-                for pay in odoo_payments:
-                    pay.write(
-                        {
-                            "fennoa_payment_id": int(payment_data.get("id")),
-                            "fennoa_invoice_id": int(invoice_data.get("id")),
-                        }
-                    )
-                _logger.info(
-                    "Created Odoo payments for Fennoa payment ID %s: %s",
-                    fennoa_payment_id,
-                    odoo_payments,
-                )
 
     # endregion API calls

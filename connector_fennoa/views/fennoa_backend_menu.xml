@@ -13,7 +13,7 @@
         sequence="10"
         groups="connector.group_connector_manager"
     />
-    
+
     <menuitem
         id="menu_fennoa_backend"
         name="Backends"
