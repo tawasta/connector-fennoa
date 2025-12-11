@@ -1,11 +1,12 @@
-from datetime import timedelta
 import base64
 import json
 import logging
+from datetime import timedelta
 
 import requests
+
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError, UserError
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 

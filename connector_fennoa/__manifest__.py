@@ -22,7 +22,7 @@
     "summary": "Fennoa Connector",
     "version": "17.0.1.0.0",
     "category": "Website",
-    "website": "https://gitlab.com/tawasta/odoo/connector-fennoa",
+    "website": "https://github.com/tawasta/connector-fennoa",
     "author": "Futural",
     "license": "AGPL-3",
     "application": False,
