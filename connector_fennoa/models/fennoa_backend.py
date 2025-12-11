@@ -69,12 +69,12 @@ class FennoaBackend(models.Model):
             password = raw
         return (self.client_identifier, password)
 
-    def _build_url(self, path):
-        """Build full request URL including base URL and path."""
+    def _build_url(self, endpoint):
+        """Build full request URL including base URL and endpoint."""
         base = self._normalized_base_url()
-        if not path.startswith("/"):
-            path = "/" + path
-        return f"{base}{path}"
+        if not endpoint.startswith("/"):
+            endpoint = "/" + endpoint
+        return f"{base}{endpoint}"
 
     def _get_headers(self):
         """Return common headers for Fennoa API requests."""
@@ -86,7 +86,7 @@ class FennoaBackend(models.Model):
     def _send_request(
         self,
         method,
-        path,
+        endpoint,
         *,
         params=None,
         form_payload=None,
@@ -99,23 +99,25 @@ class FennoaBackend(models.Model):
         """
         self.ensure_one()
 
-        url = self._build_url(path)
+        url = self._build_url(endpoint)
         auth = self._build_auth()
         headers = self._get_headers()
 
-        try:
-            kwargs = {
-                "auth": auth,
-                "headers": headers,
-                "params": params or {},
-            }
-            if json_payload is not None:
-                headers["Content-Type"] = "application/json"
-                kwargs["json"] = json_payload
-            elif form_payload is not None:
-                kwargs["data"] = form_payload
+        kwargs = {
+            "auth": auth,
+            "headers": headers,
+            "params": params or {},
+        }
 
+        if json_payload is not None:
+            headers["Content-Type"] = "application/json"
+            kwargs["json"] = json_payload
+        elif form_payload is not None:
+            kwargs["data"] = form_payload
+
+        try:
             response = requests.request(method.upper(), url, timeout=30, **kwargs)
+            self._parse_response(response)
 
             status = response.status_code
             body = response.text
@@ -125,12 +127,12 @@ class FennoaBackend(models.Model):
             body = str(exc)
             success = False
 
-        parsed = None
+        parsed = {}
         if body:
             try:
                 parsed = json.loads(body)
-            except Exception:
-                parsed = None
+            except Exception as e:
+                _logger.error("Failed to parse JSON response: %s", e)
 
         payload_for_log = json_payload if json_payload is not None else form_payload
         self.env["fennoa.binding"].create(
@@ -149,7 +151,39 @@ class FennoaBackend(models.Model):
             }
         )
 
-        return success, status, body, parsed
+        if not success:
+            extra = ""
+            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
+                extra = "\nErrors: %s" % parsed.get("errors")
+
+            raise UserError(
+                _(
+                    "API request to '%(endpoint)s' failed.\n"
+                    "Status: %(status)s\n"
+                    "Response: %(response)s %(extra)s"
+                )
+                % dict(
+                    endpoint=endpoint,
+                    status=status or "N/A",
+                    response=body,
+                    extra=extra,
+                )
+            )
+
+        return parsed
+
+    def _parse_response(self, response):
+        """
+        Helper to parse JSON response body
+        """
+        _logger.debug(f"Parsing response {response.text}")
+
+        # TODO: Do the parsing/validation here
+
+        if response.status_code <= 200 or response.status_code > 300:
+            _logger.error(f"API returned error status {response.status_code}")
+
+        return True
 
     # endregion constraints and helpers
 
@@ -157,16 +191,10 @@ class FennoaBackend(models.Model):
     def action_test_connection(self):
         """Test API access by calling GET /customer_api."""
         for backend in self:
-            success, status, body, _parsed = backend._send_request(
+            backend._send_request(
                 "GET",
                 "/customer_api/",
             )
-
-            if not success:
-                raise UserError(
-                    _("Fennoa API test failed.\nStatus: %s\nResponse: %s")
-                    % (status, body)
-                )
 
         return {
             "type": "ir.actions.client",
@@ -184,7 +212,9 @@ class FennoaBackend(models.Model):
     # -------------------------------------------------------------------------
 
     def action_import_customers(self):
-        """Fetch all customers from Fennoa and create them in Odoo (via background job)."""
+        """
+        Fetch all customers from Fennoa and create them in Odoo (via background job).
+        """
         self.ensure_one()
         response = self.api_get_customers(params={})
 
@@ -269,7 +299,7 @@ class FennoaBackend(models.Model):
             )
             if PaymentExists:
                 _logger.info(
-                    "Payment for Fennoa payment ID %s already exists in Odoo, skipping.",
+                    "Payment for Fennoa payment ID %s already exists in Odoo, skipping",
                     fennoa_payment_id,
                 )
                 continue
@@ -290,7 +320,7 @@ class FennoaBackend(models.Model):
                 }
                 wizard = (
                     self.env["account.payment.register"]
-                    .with_context(ctx)
+                    .with_context(**ctx)
                     .create(
                         {
                             "payment_date": payment_data.get("date")
@@ -327,7 +357,7 @@ class FennoaBackend(models.Model):
                 "type": "success",
                 "sticky": False,
             },
-        }                
+        }
 
     # endregion actions
 
@@ -389,7 +419,7 @@ class FennoaBackend(models.Model):
         """Create a new customer in Fennoa using FORM DATA."""
         self.ensure_one()
 
-        success, status, body, parsed = self._send_request(
+        res = self._send_request(
             "POST",
             "/customer_api/add",
             form_payload=customer_data,
@@ -397,96 +427,51 @@ class FennoaBackend(models.Model):
             related_id=partner.id if partner else None,
         )
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _("Unable to add customer to Fennoa.\nStatus: %s\nResponse: %s%s")
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     def api_update_customer(self, customer_no, update_data):
         """Update existing customer in Fennoa using JSON."""
         self.ensure_one()
 
-        path = f"/customer_api/{customer_no}"
-        success, status, body, parsed = self._send_request(
+        endpoint = f"/customer_api/{customer_no}"
+        res = self._send_request(
             "PUT",
-            path,
+            endpoint,
             json_payload=update_data,
         )
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _("Unable to update customer in Fennoa.\nStatus: %s\nResponse: %s%s")
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     def api_get_customer_by_id(self, customer_id):
         """Fetch customer details by Fennoa internal ID."""
         self.ensure_one()
 
-        path = f"/customer_api/{customer_id}"
-        success, status, body, parsed = self._send_request("GET", path)
+        endpoint = f"/customer_api/{customer_id}"
+        res = self._send_request("GET", endpoint)
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _("Unable to fetch customer from Fennoa.\nStatus: %s\nResponse: %s%s")
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     def api_get_customer_by_number(self, customer_no):
         """Fetch customer by external customer number."""
         self.ensure_one()
 
-        path = f"/customer_api/get/customer_no/{customer_no}"
-        success, status, body, parsed = self._send_request("GET", path)
+        endpoint = f"/customer_api/get/customer_no/{customer_no}"
+        res = self._send_request("GET", endpoint)
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _("Unable to fetch customer from Fennoa.\nStatus: %s\nResponse: %s%s")
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     def api_get_customers(self, params=None):
         """Fetch list of customers from Fennoa."""
         self.ensure_one()
 
-        path = "/customer_api/"
-        success, status, body, parsed = self._send_request(
+        endpoint = "/customer_api/"
+        res = self._send_request(
             "GET",
-            path,
+            endpoint,
             params=params,
         )
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _("Unable to fetch customers from Fennoa.\nStatus: %s\nResponse: %s%s")
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     # -------------------------------------------------------------------------
     # API: Sales Invoices
@@ -496,7 +481,7 @@ class FennoaBackend(models.Model):
         """Send a new sales invoice to Fennoa (FORM DATA)."""
         self.ensure_one()
 
-        success, status, body, parsed = self._send_request(
+        res = self._send_request(
             "POST",
             "/sales_api/add",
             form_payload=invoice_data,
@@ -504,19 +489,7 @@ class FennoaBackend(models.Model):
             related_id=move.id if move else None,
         )
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _(
-                    "Unable to add sales invoice to Fennoa.\n"
-                    "Status: %s\nResponse: %s%s"
-                )
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     # -------------------------------------------------------------------------
     # API: Sales invoice payments
@@ -545,25 +518,13 @@ class FennoaBackend(models.Model):
         from_str = self._format_fennoa_date(from_date, "from_date")
         to_str = self._format_fennoa_date(to_date, "to_date")
 
-        path = f"/sales_api/get/payments/{from_str}/{to_str}"
+        endpoint = f"/sales_api/get/payments/{from_str}/{to_str}"
         if created_after:
             created_str = self._format_fennoa_date(created_after, "created_after")
-            path = f"{path}/created_after:{created_str}"
+            endpoint = f"{endpoint}/created_after:{created_str}"
 
-        success, status, body, parsed = self._send_request("GET", path)
+        res = self._send_request("GET", endpoint)
 
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-            raise UserError(
-                _(
-                    "Unable to fetch sales payments from Fennoa.\n"
-                    "Status: %s\nResponse: %s%s"
-                )
-                % (status, body, extra)
-            )
-
-        return parsed or {}
+        return res
 
     # endregion API calls

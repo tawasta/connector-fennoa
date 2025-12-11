@@ -138,7 +138,8 @@ class AccountMove(models.Model):
                 # Only first VAT in list used (Fennoa only supports one per line)
                 vatpercent = line.tax_ids[0].amount or 0.0
 
-            # For credit notes (out_refund), Fennoa expects the total sum to be negative.
+            # For credit notes (out_refund),
+            # Fennoa expects the total sum to be negative.
             qty = line.quantity or 0.0
             price = line.price_unit or 0.0
             if self.move_type == "out_refund":

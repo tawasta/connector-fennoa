@@ -65,7 +65,9 @@ class ResPartner(models.Model):
 
     @api.model
     def _fennoa_build_customer_payload(self, partner):
-        """Create FORM DATA payload structure to send partner as a customer to Fennoa."""
+        """
+        Create FORM DATA payload structure to send partner as a customer to Fennoa.
+        """
         if not partner:
             raise UserError(_("No partner given for Fennoa payload build."))
 

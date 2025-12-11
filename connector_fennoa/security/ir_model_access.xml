@@ -1,23 +1,21 @@
 <?xml version="1.0" ?>
-<odoo>
-    <data noupdate="1">
-        <record id="access_fennoa_backend" model="ir.model.access">
-            <field name="name">fennoa.backend</field>
-            <field name="model_id:id">model_fennoa_backend</field>
-            <field name="group_id" />
-            <field name="perm_read">1</field>
-            <field name="perm_write">1</field>
-            <field name="perm_create">1</field>
-            <field name="perm_unlink">1</field>
-        </record>
-        <record id="access_fennoa_binding" model="ir.model.access">
-            <field name="name">fennoa.binding</field>
-            <field name="model_id:id">model_fennoa_binding</field>
-            <field name="group_id" />
-            <field name="perm_read">1</field>
-            <field name="perm_write">1</field>
-            <field name="perm_create">1</field>
-            <field name="perm_unlink">1</field>
-        </record>
-    </data>
+<odoo noupdate="0">
+    <record id="access_fennoa_backend" model="ir.model.access">
+        <field name="name">fennoa.backend</field>
+        <field name="model_id:id">model_fennoa_backend</field>
+        <field name="group_id" />
+        <field name="perm_read">1</field>
+        <field name="perm_write">1</field>
+        <field name="perm_create">1</field>
+        <field name="perm_unlink">1</field>
+    </record>
+    <record id="access_fennoa_binding" model="ir.model.access">
+        <field name="name">fennoa.binding</field>
+        <field name="model_id:id">model_fennoa_binding</field>
+        <field name="group_id" />
+        <field name="perm_read">1</field>
+        <field name="perm_write">1</field>
+        <field name="perm_create">1</field>
+        <field name="perm_unlink">1</field>
+    </record>
 </odoo>
