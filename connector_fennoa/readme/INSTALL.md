@@ -1,0 +1,1 @@
+Install the module from Apps

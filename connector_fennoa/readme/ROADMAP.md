@@ -1,0 +1,2 @@
+- Additional Fennoa API endpoints (e.g. purchase invoices) are not yet covered.
+- Sales invoice payload currently uses a minimal set of fields; more optional fields from the Fennoa API may be added in the future.
