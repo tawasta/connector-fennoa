@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_move_form_fennoa" model="ir.ui.view">
+        <field name="name">account.move.form.fennoa</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_post'][2]" position="after">
+                <button
+                    name="action_post"
+                    string="Post &amp; send to Fennoa"
+                    class="oe_highlight"
+                    type="object"
+                    groups="account.group_account_invoice"
+                    data-hotkey="q"
+                    context="{'validate_analytic': True}"
+                    invisible="not fennoa_send or state == 'posted' or move_type not in ('out_invoice','out_refund')"
+                />
+            </xpath>
+            <xpath expr="//button[@name='button_cancel']" position="after">
+                <button
+                    name="action_view_fennoa_logs"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-external-link"
+                    string="Fennoa Logs"
+                >
+                    <field name="fennoa_log_count" widget="statinfo" />
+                </button>
+            </xpath>
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Fennoa" name="fennoa_tab">
+                    <group>
+
+                        <group string="Sending options">
+                            <field name="fennoa_send" />
+                            <field name="fennoa_delayed_send" />
+                        </group>
+
+                        <group string="Status">
+                            <field name="fennoa_invoice_id" readonly="1" />
+                            <field name="fennoa_sent" readonly="1" />
+                        </group>
+
+                    </group>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

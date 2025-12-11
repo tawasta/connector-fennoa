@@ -8,6 +8,29 @@ _logger = logging.getLogger(__name__)
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
+    fennoa_log_count = fields.Integer(
+        string="Fennoa Logs",
+        compute="_compute_fennoa_log_count",
+    )
+
+    def _compute_fennoa_log_count(self):
+        for partner in self:
+            partner.fennoa_log_count = self.env["fennoa.binding"].search_count(
+                [("res_model", "=", "res.partner"), ("res_id", "=", partner.id)]
+            )
+
+    def action_view_fennoa_logs(self):
+        """Open Fennoa bindings related to this partner."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Fennoa Logs"),
+            "res_model": "fennoa.binding",
+            "view_mode": "tree,form",
+            "domain": [("res_model", "=", "res.partner"), ("res_id", "=", self.id)],
+            "context": {"default_res_model": "res.partner", "default_res_id": self.id},
+        }
+
     send_to_fennoa = fields.Boolean(
         string="Send to Fennoa",
         default=True,
@@ -20,11 +43,13 @@ class ResPartner(models.Model):
         string="Fennoa Customer ID",
         readonly=True,
         help="ID of the customer in Fennoa.",
+        index=True,
     )
     fennoa_customer_no = fields.Char(
         string="Fennoa Customer Number",
         readonly=True,
         help="Customer number in Fennoa.",
+        index=True,
     )
 
     def _get_fennoa_backend(self):
@@ -93,7 +118,7 @@ class ResPartner(models.Model):
             return
 
         payload = self._fennoa_build_customer_payload(partner)
-        result = backend.api_create_customer(payload)
+        result = backend.api_create_customer(payload, partner=partner)
 
         partner_data = result.get("data") or []
         customer = partner_data.get("Customer") or {}

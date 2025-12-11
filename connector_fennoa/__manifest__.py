@@ -32,11 +32,16 @@
         "account",
         "sale",
         "contacts",
+        "queue_job",
     ],
     "data": [
         "security/ir.model.access.csv",
+        "data/queue_channel.xml",
+        "data/cron.xml",
         "views/fennoa_backend_views.xml",
         "views/fennoa_binding_views.xml",
+        "views/move.xml",
         "views/partner.xml",
+        "views/payment.xml",
     ],
 }

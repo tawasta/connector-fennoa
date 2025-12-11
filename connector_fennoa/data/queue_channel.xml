@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo noupdate="0">
+
+    <!-- Fennoa root channel (queue_job.channel_root -> fennoa) -->
+    <record id="channel_fennoa" model="queue.job.channel">
+        <field name="name">fennoa</field>
+        <field name="parent_id" ref="queue_job.channel_root" />
+    </record>
+
+    <!-- Fennoa: import customers (backend._import_fennoa_customers) -->
+    <record id="job_function_fennoa_import_customers" model="queue.job.function">
+        <field name="model_id" ref="connector_fennoa.model_fennoa_backend" />
+        <field name="method">_import_fennoa_customers</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <!-- Fennoa: export one invoice (account.move._fennoa_export_one_invoice) -->
+    <record id="job_function_fennoa_export_one_invoice" model="queue.job.function">
+        <field name="model_id" ref="account.model_account_move" />
+        <field name="method">_fennoa_export_one_invoice</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+</odoo>

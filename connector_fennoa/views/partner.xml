@@ -9,6 +9,20 @@
                 <field name="fennoa_customer_id" />
                 <field name="fennoa_customer_no" />
             </field>
+            <xpath expr="//div[@class='oe_button_box']" position="inside">
+                <button
+                    name="action_view_fennoa_logs"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-external-link"
+                >
+                    <field
+                        name="fennoa_log_count"
+                        widget="statinfo"
+                        string="Fennoa Logs"
+                    />
+                </button>
+            </xpath>
         </field>
     </record>
 </odoo>
