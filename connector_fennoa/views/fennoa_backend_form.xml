@@ -31,28 +31,4 @@
         </field>
     </record>
 
-    <record id="view_fennoa_backend_tree" model="ir.ui.view">
-        <field name="name">fennoa.backend.tree</field>
-        <field name="model">fennoa.backend</field>
-        <field name="arch" type="xml">
-            <tree>
-                <field name="company_id" />
-                <field name="base_url" />
-            </tree>
-        </field>
-    </record>
-
-    <record id="action_fennoa_backend" model="ir.actions.act_window">
-        <field name="name">Fennoa Backends</field>
-        <field name="res_model">fennoa.backend</field>
-        <field name="view_mode">tree,form</field>
-    </record>
-
-    <menuitem id="menu_fennoa_root" name="Fennoa" />
-    <menuitem
-        id="menu_fennoa_backend"
-        name="Backends"
-        parent="menu_fennoa_root"
-        action="action_fennoa_backend"
-    />
 </odoo>

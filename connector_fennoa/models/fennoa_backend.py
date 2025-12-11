@@ -17,6 +17,7 @@ class FennoaBackend(models.Model):
     _inherit = "connector.backend"
     _rec_name = "company_id"
 
+    # region fields
     base_url = fields.Char(
         required=True,
         default="https://app.fennoa.com/api",
@@ -38,7 +39,9 @@ class FennoaBackend(models.Model):
         default=lambda self: self.env.company,
     )
     binding_ids = fields.One2many("fennoa.binding", "backend_id", readonly=True)
+    # endregion fields
 
+    # region constraints and helpers
     @api.constrains("base_url")
     def _check_base_url(self):
         """Ensure base_url starts with http/https."""
@@ -73,6 +76,13 @@ class FennoaBackend(models.Model):
             path = "/" + path
         return f"{base}{path}"
 
+    def _get_headers(self):
+        """Return common headers for Fennoa API requests."""
+        return {
+            "Accept": "application/json",
+            "User-Agent": "Futural-Odoo-Fennoa-Connector/1.0",
+        }
+
     def _send_request(
         self,
         method,
@@ -84,19 +94,20 @@ class FennoaBackend(models.Model):
         related_model=None,
         related_id=None,
     ):
-        """Perform HTTP request to Fennoa API and log request/response."""
+        """
+        Perform HTTP request to Fennoa API and log request/response.
+        """
         self.ensure_one()
 
         url = self._build_url(path)
         auth = self._build_auth()
-        headers = {"Accept": "application/json"}
+        headers = self._get_headers()
 
         try:
             kwargs = {
                 "auth": auth,
                 "headers": headers,
                 "params": params or {},
-                "timeout": 30,
             }
             if json_payload is not None:
                 headers["Content-Type"] = "application/json"
@@ -104,7 +115,7 @@ class FennoaBackend(models.Model):
             elif form_payload is not None:
                 kwargs["data"] = form_payload
 
-            response = requests.request(method.upper(), url, **kwargs)
+            response = requests.request(method.upper(), url, timeout=30, **kwargs)
 
             status = response.status_code
             body = response.text
@@ -140,6 +151,9 @@ class FennoaBackend(models.Model):
 
         return success, status, body, parsed
 
+    # endregion constraints and helpers
+
+    # region actions
     def action_test_connection(self):
         """Test API access by calling GET /customer_api."""
         for backend in self:
@@ -193,6 +207,9 @@ class FennoaBackend(models.Model):
 
         return True
 
+    # endregion actions
+
+    # region API calls
     def _import_fennoa_customers(self, customer_list):
         """Create missing Fennoa customers into Odoo."""
         Partner = self.env["res.partner"]
@@ -521,3 +538,5 @@ class FennoaBackend(models.Model):
                     fennoa_payment_id,
                     odoo_payments,
                 )
+
+    # endregion API calls

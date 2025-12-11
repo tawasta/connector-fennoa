@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <record id="view_fennoa_binding_tree" model="ir.ui.view">
+        <field name="name">fennoa.binding.tree</field>
+        <field name="model">fennoa.binding</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="create_date" />
+                <field name="backend_id" />
+                <field name="method" />
+                <field name="endpoint" />
+                <field name="status_code" />
+                <field name="successful" />
+                <field name="res_model" />
+            </tree>
+        </field>
+    </record>
+
+</odoo>
