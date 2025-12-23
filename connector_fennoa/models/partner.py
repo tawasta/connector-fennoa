@@ -9,6 +9,7 @@ _logger = logging.getLogger(__name__)
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
+    # TODO: change to fennoa_binding_ids, fennoa_bindings_count
     fennoa_log_count = fields.Integer(
         string="Fennoa Logs",
         compute="_compute_fennoa_log_count",
@@ -40,18 +41,6 @@ class ResPartner(models.Model):
             "outgoing invoice is created."
         ),
     )
-    fennoa_customer_id = fields.Integer(
-        string="Fennoa Customer ID",
-        readonly=True,
-        help="ID of the customer in Fennoa.",
-        index=True,
-    )
-    fennoa_customer_no = fields.Char(
-        string="Fennoa Customer Number",
-        readonly=True,
-        help="Customer number in Fennoa.",
-        index=True,
-    )
 
     def _get_fennoa_backend(self):
         """Return available Fennoa backend for the partner's company."""
@@ -63,6 +52,7 @@ class ResPartner(models.Model):
         )
         return backend
 
+    # TODO: use exporter instead of raw payload
     @api.model
     def _fennoa_build_customer_payload(self, partner):
         """

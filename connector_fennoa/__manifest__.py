@@ -28,10 +28,11 @@
     "application": False,
     "installable": True,
     "depends": [
-        "connector",
         "account",
-        "sale",
+        "api_request_handler",
+        "connector",
         "contacts",
+        "sale",
         "queue_job",
     ],
     "data": [

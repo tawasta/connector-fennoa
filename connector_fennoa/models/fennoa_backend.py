@@ -1,9 +1,6 @@
 import base64
-import json
 import logging
 from datetime import timedelta
-
-import requests
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -14,7 +11,7 @@ _logger = logging.getLogger(__name__)
 class FennoaBackend(models.Model):
     _name = "fennoa.backend"
     _description = "Fennoa Backend"
-    _inherit = "connector.backend"
+    _inherit = ["api.request.mixin", "connector.backend"]
     _rec_name = "company_id"
 
     # region fields
@@ -103,87 +100,41 @@ class FennoaBackend(models.Model):
         auth = self._build_auth()
         headers = self._get_headers()
 
+        if json_payload is not None:
+            headers["Content-Type"] = "application/json"
+            payload = json_payload
+        elif form_payload is not None:
+            payload = form_payload
+        else:
+            payload = None
+
         kwargs = {
             "auth": auth,
             "headers": headers,
             "params": params or {},
+            "endpoint": url,
+            "method": method,
+            "payload": payload,
         }
 
-        if json_payload is not None:
-            headers["Content-Type"] = "application/json"
-            kwargs["json"] = json_payload
-        elif form_payload is not None:
-            kwargs["data"] = form_payload
+        _logger.debug("Sending request to Fennoa: %s", kwargs)
 
-        try:
-            response = requests.request(method.upper(), url, timeout=30, **kwargs)
-            self._parse_response(response)
+        response = self._api_request_make(**kwargs)
 
-            status = response.status_code
-            body = response.text
-            success = 200 <= status < 300
-        except requests.RequestException as exc:
-            status = None
-            body = str(exc)
-            success = False
-
-        parsed = {}
-        if body:
-            try:
-                parsed = json.loads(body)
-            except Exception as e:
-                _logger.error("Failed to parse JSON response: %s", e)
-
-        payload_for_log = json_payload if json_payload is not None else form_payload
-        self.env["fennoa.binding"].create(
-            {
-                "backend_id": self.id,
-                "method": method.upper(),
-                "endpoint": url,
-                "payload": json.dumps(payload_for_log, ensure_ascii=False)
-                if payload_for_log
-                else "",
-                "response": body,
-                "status_code": status or 0,
-                "successful": success,
-                "res_model": related_model,
-                "res_id": related_id,
-            }
-        )
-
-        if not success:
-            extra = ""
-            if parsed and isinstance(parsed, dict) and parsed.get("errors"):
-                extra = "\nErrors: %s" % parsed.get("errors")
-
-            raise UserError(
-                _(
-                    "API request to '%(endpoint)s' failed.\n"
-                    "Status: %(status)s\n"
-                    "Response: %(response)s %(extra)s"
-                )
-                % dict(
-                    endpoint=endpoint,
-                    status=status or "N/A",
-                    response=body,
-                    extra=extra,
-                )
+        # TODO: get external ID from response
+        external_id = False
+        if external_id:
+            self.env["fennoa.binding"].create(
+                {
+                    "backend_id": self.id,
+                    "res_model": related_model,
+                    "res_id": related_id,
+                    "company_id": self.company_id.id,
+                    "external_id": external_id,
+                }
             )
 
-        return parsed
-
-    def _parse_response(self, response):
-        """
-        Helper to parse JSON response body
-        """
-        _logger.debug(f"Parsing response {response.text}")
-
-        # TODO: Do the parsing/validation here
-
-        if response.status_code <= 200 or response.status_code > 300:
-            _logger.error(f"API returned error status {response.status_code}")
-
-        return True
+        return response
 
     # endregion constraints and helpers
 
@@ -216,16 +167,8 @@ class FennoaBackend(models.Model):
         Fetch all customers from Fennoa and create them in Odoo (via background job).
         """
         self.ensure_one()
-        response = self.api_get_customers(params={})
 
-        customer_list = response.get("data") or []
-
-        if not customer_list:
-            _logger.info("Fennoa: no customers to import for backend %s", self.id)
-            return True
-
-        job_desc = _("Fennoa: import %(count)s customers for company %(company)s") % {
-            "count": len(customer_list),
+        job_desc = _("Fennoa: import customers for '%(company)s'") % {
             "company": self.company_id.display_name,
         }
 
@@ -233,7 +176,7 @@ class FennoaBackend(models.Model):
             description=job_desc,
             priority=30,
             max_retries=3,
-        )._import_fennoa_customers(customer_list)
+        )._import_fennoa_customers()
 
         return {
             "type": "ir.actions.client",
@@ -362,54 +305,93 @@ class FennoaBackend(models.Model):
     # endregion actions
 
     # region API calls
-    def _import_fennoa_customers(self, customer_list):
-        """Create missing Fennoa customers into Odoo."""
-        Partner = self.env["res.partner"]
+    def _import_fennoa_customers(self):
+        response = self.api_get_customers()
+        customer_list = response.json().get("data", [])
+
+        if not customer_list:
+            return "No customers to import"
+
         for row in customer_list:
             customer = row.get("Customer") or {}
             if not customer:
                 continue
 
-            fennoa_id = customer.get("id")
-            if not fennoa_id:
-                continue
+            job_desc = _("Fennoa: import customer '[%(id)s]%(name)s'") % {
+                "id": customer.get("id") or "",
+                "name": customer.get("name") or "",
+            }
 
+            self.with_delay(description=job_desc)._import_fennoa_customer(customer)
+
+        return "Import jobs for %s customers have been queued." % len(customer_list)
+
+    def _import_fennoa_customer(self, customer):
+        """Create missing Fennoa customers into Odoo."""
+        Partner = self.env["res.partner"]
+        Binding = self.env["fennoa.binding"]
+
+        fennoa_id = customer.get("id")
+        if not fennoa_id:
+            return "Invalid customer data from Fennoa: missing ID"
+
+        # Try to find existing binding
+        existing = Binding.search(
+            [
+                ("backend_id", "=", self.id),
+                ("external_id", "=", str(fennoa_id)),
+                ("res_model", "=", Partner._name),
+            ],
+            limit=1,
+        )
+        if not existing:
+            # Try to find existing partner by customer number
             existing = Partner.search(
                 [
-                    "|",
-                    ("fennoa_customer_id", "=", fennoa_id),
-                    ("fennoa_customer_no", "=", customer.get("customer_no") or ""),
+                    ("ref", "=", customer.get("customer_no") or ""),
                 ],
                 limit=1,
             )
-            if existing:
-                continue
+        if existing:
+            return "Customer already exists in Odoo, skipping import"
 
-            country_code = customer.get("country_id") or ""
-            country = False
-            if country_code:
-                country = self.env["res.country"].search(
-                    [("code", "=", country_code)], limit=1
-                )
+        country_code = customer.get("country_id") or ""
+        country = False
+        if country_code:
+            country = self.env["res.country"].search(
+                [("code", "=", country_code)], limit=1
+            )
 
-            vals = {
-                "name": customer.get("name") or "",
-                "street": customer.get("address") or "",
-                "zip": customer.get("postalcode") or "",
-                "city": customer.get("city") or "",
-                "country_id": country.id if country else False,
-                "email": customer.get("email") or "",
-                "phone": customer.get("phone") or "",
-                "vat": customer.get("business_id") or "",
-                "comment": customer.get("description") or "",
-                "website": customer.get("website") or "",
-                "fennoa_customer_id": int(fennoa_id),
-                "fennoa_customer_no": customer.get("customer_no") or "",
-                "send_to_fennoa": True,
-                "company_id": self.company_id.id,
-            }
+        # TODO: use importer instead of raw values
+        vals = {
+            "name": customer.get("name") or "",
+            "street": customer.get("address") or "",
+            "zip": customer.get("postalcode") or "",
+            "city": customer.get("city") or "",
+            "country_id": country.id if country else False,
+            "email": customer.get("email") or "",
+            "phone": customer.get("phone") or "",
+            "vat": customer.get("business_id") or "",
+            "comment": customer.get("description") or "",
+            "website": customer.get("website") or "",
+            "ref": customer.get("customer_no") or "",
+            "send_to_fennoa": True,
+            "company_id": self.company_id.id,
+        }
+        new_partner = Partner.create(vals)
 
-            Partner.create(vals)
+        binding_vals = {
+            "backend_id": self.id,
+            "res_model": Partner._name,
+            "external_id": fennoa_id,
+            "res_id": new_partner.id,
+        }
+
+        Binding.create(binding_vals)
+        return (
+            f"Imported Fennoa customer ID '{fennoa_id}' "
+            f"into Odoo with ID '{new_partner.id}'"
+        )
 
     # -------------------------------------------------------------------------
     # API: Customers
