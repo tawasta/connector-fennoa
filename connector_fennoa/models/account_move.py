@@ -9,10 +9,20 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
-    fennoa_send = fields.Boolean(
-        string="Send to Fennoa",
+    fennoa_binding_count = fields.Integer(
+        string="Fennoa Logs",
+        compute="_compute_fennoa_binding_count",
+    )
+    fennoa_binding_ids = fields.One2many(
+        comodel_name="fennoa.binding",
+        inverse_name="res_id",
+        string="Fennoa Bindings",
+        domain=[("res_model", "=", "res.partner")],
+    )
+    fennoa_export = fields.Boolean(
+        string="Export to Fennoa",
+        help="Disable this to prevent exporting partner to Fennoa",
         default=True,
-        help="Uncheck to skip sending this invoice to Fennoa on validation.",
     )
 
     fennoa_delayed_send = fields.Boolean(
@@ -43,6 +53,34 @@ class AccountMove(models.Model):
         help="ID of the invoice in Fennoa.",
         index=True,
     )
+
+    def _compute_fennoa_binding_count(self):
+        for record in self:
+            record.fennoa_binding_count = len(self.fennoa_binding_ids)
+
+    def action_view_fennoa_bindings(self):
+        """Open Fennoa bindings related to this record."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Fennoa Bindings"),
+            "res_model": "fennoa.binding",
+            "view_mode": "tree,form",
+            "domain": [("res_model", "=", self._name), ("res_id", "=", self.id)],
+            "context": {"default_res_model": self._name, "default_res_id": self.id},
+        }
+
+    def action_fennoa_export_record(self):
+        """Export record to Fennoa"""
+        for record in self:
+            record.fennoa_export_record()
+        return True
+
+    def action_fennoa_import_record(self):
+        """Update record from Fennoa."""
+        for record in self:
+            _logger.error("Importing record from Fennoa not implemented!")
+        return True
 
     def _compute_fennoa_log_count(self):
         """Compute number of Fennoa bindings linked to this invoice."""
@@ -165,7 +203,7 @@ class AccountMove(models.Model):
         """Send a single invoice to Fennoa (called directly or via with_delay)."""
         self.ensure_one()
 
-        if not self.fennoa_send:
+        if not self.fennoa_export:
             return
 
         if self.move_type not in ("out_invoice", "out_refund"):
@@ -221,7 +259,7 @@ class AccountMove(models.Model):
           schedule one background job per invoice using with_delay (queue_job).
         """
         sale_moves = self.filtered(
-            lambda m: m.move_type in ("out_invoice", "out_refund") and m.fennoa_send
+            lambda m: m.move_type in ("out_invoice", "out_refund") and m.fennoa_export
         )
         if not sale_moves:
             return True
@@ -256,11 +294,11 @@ class AccountMove(models.Model):
     def _post(self, soft=True):
         """
         After posting sale invoices, automatically send them to Fennoa
-        according to fennoa_send / fennoa_delayed_send flags.
+        according to fennoa_export / fennoa_delayed_send flags.
         """
         res = super()._post(soft)
 
-        sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_send)
+        sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_export)
         if sale_invoices:
             sale_invoices.action_fennoa_export_invoice()
 

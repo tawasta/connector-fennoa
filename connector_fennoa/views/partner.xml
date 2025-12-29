@@ -63,7 +63,7 @@
                     </field>
                 </page>
 
-            </xpath>            
+            </xpath>
         </field>
     </record>
 </odoo>

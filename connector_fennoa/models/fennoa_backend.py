@@ -150,19 +150,34 @@ class FennoaBackend(models.Model):
 
         response = self._api_request_make(**kwargs)
 
-        # TODO: get external ID from response
-        print(response)
-        external_id = False
+        response_data = response.json().get("data") or {}
+
+        # TODO: different method for response handling / binding creation
+        if len(response_data) == 1:
+            external_id = list(response_data.values())[0].get("id")
+        else:
+            external_id = None
+
         if external_id:
-            self.env["fennoa.binding"].create(
-                {
+            FennoaBinding = self.env["fennoa.binding"].sudo()
+            existing = FennoaBinding.search(
+                [
+                    ("backend_id", "=", self.id),
+                    ("res_model", "=", related_model),
+                    ("res_id", "=", related_id),
+                    ("external_id", "=", external_id),
+                ],
+                limit=1,
+            )
+            if not existing:
+                vals = {
                     "backend_id": self.id,
                     "res_model": related_model,
                     "res_id": related_id,
                     "company_id": self.company_id.id,
                     "external_id": external_id,
                 }
-            )
+                self.env["fennoa.binding"].create(vals)
 
         return response
 

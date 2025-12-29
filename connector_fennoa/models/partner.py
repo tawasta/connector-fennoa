@@ -9,7 +9,6 @@ _logger = logging.getLogger(__name__)
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
-    # TODO: change to fennoa_binding_ids, fennoa_bindings_count
     fennoa_binding_count = fields.Integer(
         string="Fennoa Logs",
         compute="_compute_fennoa_binding_count",
@@ -20,7 +19,6 @@ class ResPartner(models.Model):
         string="Fennoa Bindings",
         domain=[("res_model", "=", "res.partner")],
     )
-
     fennoa_export = fields.Boolean(
         string="Export to Fennoa",
         help="Disable this to prevent exporting partner to Fennoa",
@@ -28,31 +26,31 @@ class ResPartner(models.Model):
     )
 
     def _compute_fennoa_binding_count(self):
-        for partner in self:
-            partner.fennoa_binding_count = len(self.fennoa_binding_ids)
+        for record in self:
+            record.fennoa_binding_count = len(self.fennoa_binding_ids)
 
     def action_view_fennoa_bindings(self):
-        """Open Fennoa bindings related to this partner."""
+        """Open Fennoa bindings related to this record."""
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
             "name": _("Fennoa Bindings"),
             "res_model": "fennoa.binding",
             "view_mode": "tree,form",
-            "domain": [("res_model", "=", "res.partner"), ("res_id", "=", self.id)],
-            "context": {"default_res_model": "res.partner", "default_res_id": self.id},
+            "domain": [("res_model", "=", self._name), ("res_id", "=", self.id)],
+            "context": {"default_res_model": self._name, "default_res_id": self.id},
         }
 
     def action_fennoa_export_record(self):
-        """Export partner data to Fennoa """
-        for partner in self:
-            partner.fennoa_export_record()
+        """Export record to Fennoa"""
+        for record in self:
+            record.fennoa_export_record()
         return True
 
     def action_fennoa_import_record(self):
-        """ Update partner data from Fennoa. """
-        for partner in self:
-            _logger.error("Importing partner from Fennoa not implemented!")
+        """Update record from Fennoa."""
+        for record in self:
+            _logger.error("Importing record from Fennoa not implemented!")
         return True
 
     # TODO: use exporter instead of raw payload
@@ -102,16 +100,16 @@ class ResPartner(models.Model):
         if not self.fennoa_export:
             return
 
-        backend = self.env["fennoa.backend"].sudo().get_backend(
-            company=self.company_id or self.env.company
+        backend = (
+            self.env["fennoa.backend"]
+            .sudo()
+            .get_backend(company=self.company_id or self.env.company)
         )
 
         # TODO: use exporter
         payload = self._fennoa_build_customer_payload()
-        
-        binding = self.fennoa_binding_ids.filtered(
-            lambda b: b.backend_id == backend
-        )
+
+        binding = self.fennoa_binding_ids.filtered(lambda b: b.backend_id == backend)
         if binding:
             # Already exported
             result = backend.api_update_customer(binding.external_id, payload)
@@ -119,12 +117,4 @@ class ResPartner(models.Model):
             # Create new partner
             result = backend.api_create_customer(payload, partner=self)
 
-        partner_data = result.get("data") or []
-        customer = partner_data.get("Customer") or {}
-
-        self.write(
-            {
-                "fennoa_customer_id": customer.get("id") or 0,
-                "fennoa_customer_no": customer.get("customer_no") or "",
-            }
-        )
+        return result
