@@ -177,8 +177,7 @@ class AccountMove(models.Model):
             )
 
         # Ensure customer exists in Fennoa
-        Partner = self.env["res.partner"]
-        Partner._fennoa_ensure_customer(self.partner_id)
+        self.partner_id.fennoa_export_record()
 
         backend = self.env["fennoa.backend"].search(
             [("company_id", "=", self.company_id.id)],

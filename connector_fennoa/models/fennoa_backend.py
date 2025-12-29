@@ -39,6 +39,33 @@ class FennoaBackend(models.Model):
     # endregion fields
 
     # region constraints and helpers
+
+    def get_backend(self, company):
+        """
+        Return Fennoa backend record based on the current user company
+        :param company: Company record
+        :return: Fennoa backend record
+        """
+        if isinstance(company, int):
+            company_id = company
+        else:
+            company_id = company.id
+
+        backend = self.search(
+            [
+                ("company_id", "=", company_id),
+            ]
+        )
+
+        if not backend:
+            raise UserError(
+                _("Please configure a Fennoa backend for company {}.").format(
+                    company.name
+                )
+            )
+
+        return backend
+
     @api.constrains("base_url")
     def _check_base_url(self):
         """Ensure base_url starts with http/https."""
@@ -86,6 +113,7 @@ class FennoaBackend(models.Model):
         endpoint,
         *,
         params=None,
+        values=None,
         form_payload=None,
         json_payload=None,
         related_model=None,
@@ -112,6 +140,7 @@ class FennoaBackend(models.Model):
             "auth": auth,
             "headers": headers,
             "params": params or {},
+            "values": values or {},
             "endpoint": url,
             "method": method,
             "payload": payload,
@@ -122,6 +151,7 @@ class FennoaBackend(models.Model):
         response = self._api_request_make(**kwargs)
 
         # TODO: get external ID from response
+        print(response)
         external_id = False
         if external_id:
             self.env["fennoa.binding"].create(
@@ -375,7 +405,6 @@ class FennoaBackend(models.Model):
             "comment": customer.get("description") or "",
             "website": customer.get("website") or "",
             "ref": customer.get("customer_no") or "",
-            "send_to_fennoa": True,
             "company_id": self.company_id.id,
         }
         new_partner = Partner.create(vals)
@@ -411,15 +440,15 @@ class FennoaBackend(models.Model):
 
         return res
 
-    def api_update_customer(self, customer_no, update_data):
+    def api_update_customer(self, external_id, payload):
         """Update existing customer in Fennoa using JSON."""
         self.ensure_one()
 
-        endpoint = f"/customer_api/{customer_no}"
+        endpoint = f"/customer_api/{external_id}"
         res = self._send_request(
             "PUT",
             endpoint,
-            json_payload=update_data,
+            json_payload=payload,
         )
 
         return res

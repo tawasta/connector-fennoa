@@ -4,24 +4,66 @@
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form" />
         <field name="arch" type="xml">
-            <field name="category_id" position="after">
-                <field name="send_to_fennoa" />
-            </field>
             <xpath expr="//div[@class='oe_button_box']" position="inside">
                 <button
-                    name="action_view_fennoa_logs"
+                    name="action_view_fennoa_bindings"
                     type="object"
                     class="oe_stat_button"
                     icon="fa-external-link"
                     groups="base.group_erp_manager"
                 >
                     <field
-                        name="fennoa_log_count"
+                        name="fennoa_binding_count"
                         widget="statinfo"
                         string="Fennoa bindings"
                     />
                 </button>
             </xpath>
+
+            <xpath expr="//notebook/page[last()]" position="after">
+                <page
+                    string="Fennoa"
+                    name="fennoa"
+                    groups="queue_job.group_queue_job_manager"
+                >
+                    <group>
+                        <group colspan="2">
+                            <field name="fennoa_export" widget="boolean_toggle" />
+                        </group>
+                        <group>
+                            <button
+                                name="action_fennoa_export_record"
+                                type="object"
+                                class="oe_highlight"
+                                string="Export to Fennoa"
+                                invisible="not fennoa_export"
+                                colspan="2"
+                            />
+                        </group>
+                        <group>
+                            <button
+                                name="action_fennoa_import_record"
+                                type="object"
+                                class=""
+                                string="Update from Fennoa"
+                                invisible="not fennoa_binding_ids"
+                                colspan="2"
+                            />
+                        </group>
+                    </group>
+
+                    <label for="fennoa_binding_ids" />
+                    <field name="fennoa_binding_ids" nolabel="1">
+                        <tree create="false" delete="false">
+                            <field name="backend_id" readonly="1" />
+                            <field name="res_id" readonly="1" />
+                            <field name="res_model" readonly="1" />
+                            <field name="external_id" readonly="1" />
+                        </tree>
+                    </field>
+                </page>
+
+            </xpath>            
         </field>
     </record>
 </odoo>
