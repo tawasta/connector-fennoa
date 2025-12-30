@@ -148,17 +148,18 @@ class FennoaBackend(models.Model):
 
         _logger.debug("Sending request to Fennoa: %s", kwargs)
 
-        response = self._api_request_make(**kwargs)
-
-        response_data = response.json().get("data") or {}
+        request = self._api_request_make(**kwargs)
+        response = request.json().get("data") or request.json() or {}
 
         # TODO: different method for response handling / binding creation
-        if len(response_data) == 1:
-            external_id = list(response_data.values())[0].get("id")
+        if response.get("id"):
+            external_id = response.get("id")
+        elif len(response) == 1 and isinstance(response, dict):
+            external_id = list(response.values())[0].get("id")
         else:
             external_id = None
 
-        if external_id:
+        if external_id and related_model and related_id:
             FennoaBinding = self.env["fennoa.binding"].sudo()
             existing = FennoaBinding.search(
                 [
@@ -174,7 +175,6 @@ class FennoaBackend(models.Model):
                     "backend_id": self.id,
                     "res_model": related_model,
                     "res_id": related_id,
-                    "company_id": self.company_id.id,
                     "external_id": external_id,
                 }
                 self.env["fennoa.binding"].create(vals)
@@ -473,7 +473,11 @@ class FennoaBackend(models.Model):
         self.ensure_one()
 
         endpoint = f"/customer_api/{customer_id}"
-        res = self._send_request("GET", endpoint)
+        try:
+            res = self._send_request("GET", endpoint).get("Customer") or {}
+        except ValidationError as e:
+            _logger.warning(f"Customer with ID {customer_id} not found: %s", str(e))
+            res = None
 
         return res
 
@@ -482,7 +486,11 @@ class FennoaBackend(models.Model):
         self.ensure_one()
 
         endpoint = f"/customer_api/get/customer_no/{customer_no}"
-        res = self._send_request("GET", endpoint)
+        try:
+            res = self._send_request("GET", endpoint).get("Customer") or {}
+        except ValidationError as e:
+            _logger.warning(f"Customer with number {customer_no} not found: %s", str(e))
+            res = None
 
         return res
 

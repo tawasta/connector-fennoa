@@ -52,8 +52,15 @@
                         </group>
                     </group>
 
-                    <label for="fennoa_binding_ids" />
-                    <field name="fennoa_binding_ids" nolabel="1">
+                    <label
+                        for="fennoa_binding_ids"
+                        invisible="not fennoa_binding_ids"
+                    />
+                    <field
+                        name="fennoa_binding_ids"
+                        nolabel="1"
+                        invisible="not fennoa_binding_ids"
+                    >
                         <tree create="false" delete="false">
                             <field name="backend_id" readonly="1" />
                             <field name="res_id" readonly="1" />

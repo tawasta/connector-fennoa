@@ -49,8 +49,7 @@ class ResPartner(models.Model):
 
     def action_fennoa_import_record(self):
         """Update record from Fennoa."""
-        for record in self:
-            _logger.error("Importing record from Fennoa not implemented!")
+        _logger.error("Importing record from Fennoa not implemented!")
         return True
 
     # TODO: use exporter instead of raw payload
@@ -110,9 +109,25 @@ class ResPartner(models.Model):
         payload = self._fennoa_build_customer_payload()
 
         binding = self.fennoa_binding_ids.filtered(lambda b: b.backend_id == backend)
+        if not binding and self.ref:
+            # Try to find existing partner from Fennoa and create a binding
+            fennoa_customer = backend.api_get_customer_by_number(self.ref)
+            if fennoa_customer:
+                binding = (
+                    self.env["fennoa.binding"]
+                    .sudo()
+                    .create(
+                        {
+                            "backend_id": backend.id,
+                            "external_id": fennoa_customer.get("id"),
+                            "res_model": self._name,
+                            "res_id": self.id,
+                        }
+                    )
+                )
         if binding:
             # Already exported
-            result = backend.api_update_customer(binding.external_id, payload)
+            result = backend.api_update_customer(self.ref, payload)
         else:
             # Create new partner
             result = backend.api_create_customer(payload, partner=self)

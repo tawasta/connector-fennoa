@@ -8,10 +8,10 @@
         <field name="channel_id" ref="channel_fennoa" />
     </record>
 
-    <!-- Fennoa: export one invoice (account.move._fennoa_export_one_invoice) -->
-    <record id="job_function_fennoa_export_one_invoice" model="queue.job.function">
+    <!-- Fennoa: export invoice (account.move.fennoa_export_record) -->
+    <record id="job_function_fennoa_invoice_export_record" model="queue.job.function">
         <field name="model_id" ref="account.model_account_move" />
-        <field name="method">_fennoa_export_one_invoice</field>
+        <field name="method">fennoa_export_record</field>
         <field name="channel_id" ref="channel_fennoa" />
     </record>
 

@@ -7,12 +7,13 @@ class FennoaBinding(models.Model):
     _inherit = "external.binding"
     _order = "id DESC"
 
-    # method = fields.Char()
-    # endpoint = fields.Char()
-    # payload = fields.Text()
-    # response = fields.Text()
-    # status_code = fields.Integer()
-    # successful = fields.Boolean()
+    _sql_constraints = [
+        (
+            "unique_binding",
+            "unique(backend_id, res_model, res_id)",
+            "A Fennoa binding for this record already exists.",
+        ),
+    ]
 
     backend_id = fields.Many2one(
         comodel_name="fennoa.backend",

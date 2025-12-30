@@ -15,7 +15,7 @@
                     groups="account.group_account_invoice"
                     data-hotkey="q"
                     context="{'validate_analytic': True}"
-                    invisible="not fennoa_export or state == 'posted' or (fennoa_binding_ids and move_type in ('out_invoice', 'out_refund'))"
+                    invisible="not fennoa_export or state == 'posted' or (fennoa_binding_count and move_type in ('out_invoice', 'out_refund'))"
                 />
                 <button
                     name="action_fennoa_export_record"
@@ -24,7 +24,7 @@
                     type="object"
                     data-hotkey="q"
                     groups="account.group_account_invoice"
-                    invisible="not fennoa_export or state != 'posted' or fennoa_binding_ids"
+                    invisible="not fennoa_export or state != 'posted' or fennoa_binding_count"
                 />
             </xpath>
 
@@ -35,6 +35,7 @@
                     class="oe_stat_button"
                     icon="fa-external-link"
                     groups="base.group_erp_manager"
+                    invisible="not fennoa_binding_count"
                 >
                     <field
                         name="fennoa_binding_count"
@@ -48,20 +49,14 @@
                 <page string="Fennoa" name="fennoa">
                     <group>
                         <group colspan="2" string="Sending options">
-                            <field
-                                name="fennoa_export"
-                                groups="account.group_account_invoice"
-                                widget="boolean_toggle"
-                            />
+                            <field name="fennoa_export" widget="boolean_toggle" />
                             <field
                                 name="fennoa_delayed_send"
                                 groups="base.group_no_one"
                                 widget="boolean_toggle"
-                            />                        
-                            <field
-                                name="fennoa_sent"
-                                readonly="1"
                             />
+                            <field name="fennoa_sent" readonly="1" />
+                            <field name="fennoa_binding_count" invisible="1" />
                         </group>
                         <group>
                             <button
@@ -79,14 +74,23 @@
                                 type="object"
                                 class=""
                                 string="Update from Fennoa"
-                                invisible="not fennoa_binding_ids"
+                                invisible="not fennoa_binding_count"
                                 colspan="2"
                             />
                         </group>
                     </group>
 
-                    <label for="fennoa_binding_ids" />
-                    <field name="fennoa_binding_ids" nolabel="1">
+                    <label
+                        for="fennoa_binding_ids"
+                        groups="base.group_erp_manager"
+                        invisible="not fennoa_binding_ids"
+                    />
+                    <field
+                        name="fennoa_binding_ids"
+                        nolabel="1"
+                        groups="base.group_erp_manager"
+                        invisible="not fennoa_binding_ids"
+                    >
                         <tree create="false" delete="false">
                             <field name="backend_id" readonly="1" />
                             <field name="res_id" readonly="1" />

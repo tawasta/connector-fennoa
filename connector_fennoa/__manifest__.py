@@ -29,11 +29,11 @@
     "installable": True,
     "depends": [
         "account",
+        "account_invoice_transmit_method",
         "api_request_handler",
         "connector",
-        "contacts",
+        "l10n_fi_edicode",
         "sale",
-        "queue_job",
     ],
     "data": [
         "security/ir_model_access.xml",
