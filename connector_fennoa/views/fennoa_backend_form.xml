@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_fennoa_backend_form" model="ir.ui.view">
+        <field name="name">Fennoa backend form</field>
+        <field name="model">fennoa.backend</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button
+                        string="Test authentication"
+                        type="object"
+                        name="action_test_connection"
+                        groups="base.group_system"
+                        help="Test Fennoa authentication by fetching customer information"
+                    />
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+
+                    </div>
+
+                    <group>
+                        <group name="settings" string="Setting">
+                            <field name="company_id" />
+                            <field name="base_url" />
+                            <field name="client_identifier" />
+                            <field name="secret_key_b64" password="1" />
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page name="sales_invoices" string="Sales invoices">
+                            <group name="sale_invoices_group">
+                                <group
+                                    name="sale_invoices_group_invoice_settings"
+                                    string="Invoice settings"
+                                >
+
+                                </group>
+                            </group>
+                        </page>
+
+                        <page name="payments" string="Payments">
+                            <group name="payments_group">
+                                <group name="payments_group_import" string="Import">
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Import payments from Fennoa
+                                    </p>
+                                    <button
+                                        name="action_import_payments"
+                                        confirm="Are you sure you want to import payments?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Import payments"
+                                    />
+                                </group>
+                                <group
+                                    name="payments_group_import_settings"
+                                    string="Import settings"
+                                >
+                                    <!-- Payments start date shoud be configurable -->
+                                    <!--<field name="payments_start_date" />-->
+                                </group>
+                            </group>
+                        </page>
+
+                        <page name="customers" string="Customers">
+                            <group name="customers_group">
+                                <group name="customers_group_import" string="Import">
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Import or update all customers from Fennoa.
+                                        <br />
+                                        Matching is done with customer code, business code, email, exact name.
+                                        <br />
+                                        You can configure the behaviour of this button below.
+                                    </p>
+                                    <button
+                                        name="action_import_customers"
+                                        confirm="Are you sure you want to import customers?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Import customers"
+                                    />
+                                </group>
+                                <group
+                                    name="customers_group_import_settings"
+                                    string="Import settings"
+                                >
+                                    <!-- Creating and/or updating customers should be configurable -->
+                                    <!--
+                                    <field
+                                        name="customer_import_create"
+                                        widget="boolean_toggle"
+                                    />
+                                    <field
+                                        name="customer_import_update"
+                                        widget="boolean_toggle"
+                                    />
+                                    -->
+                                </group>
+                            </group>
+                        </page>
+
+                        <page name="products" string="Products">
+                            <group name="products_import_group">
+                                <group
+                                    name="products_import_group_import"
+                                    string="Import"
+                                >
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Import or update all products from Fennoa.
+                                        <br />
+                                        Matching is done by internal code or exact name match.
+                                        <br />
+                                        You can configure the behaviour of this button below.
+                                    </p>
+                                    <!--
+                                    <button
+                                        name="action_import_products"
+                                        confirm="Are you sure you want to import products?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Import products"
+                                    />
+                                    -->
+                                </group>
+                                <group
+                                    name="products_import_group_import_settings"
+                                    string="Import settings"
+                                >
+                                    <!-- Creating and/or updating products should be configurable -->
+                                    <!--
+                                    <field
+                                        name="product_import_create"
+                                        widget="boolean_toggle"
+                                    />
+                                    <field
+                                        name="product_import_update"
+                                        widget="boolean_toggle"
+                                    />
+                                    -->
+                                </group>
+                            </group>
+
+                            <group name="products_export_group">
+                                <group
+                                    name="products_export_group_export"
+                                    string="Export"
+                                >
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Export or update all products to Fennoa.
+                                        <br />
+                                        If product doesn't exist, one will be created.
+                                        If product exists (binding exists), it will be updated.
+                                    </p>
+                                    <!--
+                                    <button
+                                        name="action_export_products"
+                                        confirm="Are you sure you want to export products?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Export products"
+                                    />
+                                    -->
+                                </group>
+                                <group
+                                    name="products_export_group_export_settings"
+                                    string="Export settings"
+                                >
+
+                                </group>
+                            </group>
+
+                        </page>
+
+                        <!--
+                        <page name="dimensions" string="Dimensions">
+                            <group name="dimensions_group_import">
+                                <group name="dimensions_group_import" string="Import">
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Import or update all dimensions from Fennoa.
+                                        <br />
+                                        If dimension doesn't exist, one will be created.
+                                        If dimension exists (name match), it will be updated.
+                                    </p>
+                                    <button
+                                        name="action_import_dimensions"
+                                        confirm="Are you sure you want to import dimensions?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Import dimensions"
+                                    />
+                                </group>
+                                <group
+                                    name="dimensions_group_import_settings"
+                                    string="Import Settings"
+                                >
+
+                                </group>
+                            </group>
+                        </page>
+                        -->
+
+                    </notebook>
+
+                </sheet>
+
+            </form>
+        </field>
+    </record>
+
+</odoo>

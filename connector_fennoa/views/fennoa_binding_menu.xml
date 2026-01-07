@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <record id="action_fennoa_binding" model="ir.actions.act_window">
+        <field name="name">Fennoa Bindings</field>
+        <field name="res_model">fennoa.binding</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="menu_fennoa_binding"
+        name="Bindings"
+        parent="menu_fennoa_root"
+        action="action_fennoa_binding"
+    />
+</odoo>

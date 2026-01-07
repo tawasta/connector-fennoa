@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <record id="view_fennoa_binding_form" model="ir.ui.view">
+        <field name="name">fennoa.binding.form</field>
+        <field name="model">fennoa.binding</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="backend_id" />
+                        <field name="company_id" />
+                        <field name="res_model" />
+                        <field name="res_id" />
+                        <field name="external_id" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>
