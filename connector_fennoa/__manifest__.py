@@ -1,7 +1,7 @@
 ##############################################################################
 #
-#    Author: Tawasta
-#    Copyright 2020 Oy Tawasta OS Technologies Ltd. (https://tawasta.fi)
+#    Author: Futural Oy
+#    Copyright 2025 Futural Oy (https://futural.fi)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -19,24 +19,36 @@
 ##############################################################################
 {
     "name": "Fennoa Connector",
-    "summary": "Fennoa Connector",
+    "summary": "Integrate Odoo to Fennoa",
     "version": "17.0.1.0.0",
-    "category": "Website",
-    "website": "https://gitlab.com/tawasta/odoo/connector-fennoa",
+    "category": "Invoicing & Payments",
+    "website": "https://github.com/tawasta/connector-fennoa",
     "author": "Futural",
     "license": "AGPL-3",
     "application": False,
     "installable": True,
     "depends": [
-        "connector",
         "account",
+        "account_invoice_transmit_method",
+        "api_request_handler",
+        "connector",
+        "l10n_fi_edicode",
         "sale",
-        "contacts",
     ],
     "data": [
-        "security/ir.model.access.csv",
-        "views/fennoa_backend_views.xml",
-        "views/fennoa_binding_views.xml",
+        "security/ir_model_access.xml",
+        "data/queue_job_channel.xml",
+        "data/queue_job_function.xml",
+        "data/cron.xml",
+        "views/account_move.xml",
+        "views/account_payment.xml",
+        "views/fennoa_backend_form.xml",
+        "views/fennoa_backend_menu.xml",
+        "views/fennoa_backend_tree.xml",
+        "views/fennoa_binding_form.xml",
+        "views/fennoa_binding_menu.xml",
+        "views/fennoa_binding_search.xml",
+        "views/fennoa_binding_tree.xml",
         "views/partner.xml",
     ],
 }
