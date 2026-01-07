@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <record id="view_fennoa_binding_search" model="ir.ui.view">
+        <field name="name">fennoa.binding.search</field>
+        <field name="model">fennoa.binding</field>
+        <field name="arch" type="xml">
+            <search string="Fennoa Bindings">
+                <field name="backend_id" />
+                <field name="res_model" />
+                <field name="res_id" />
+                <field name="external_id" />
+            </search>
+        </field>
+    </record>
+
+</odoo>
