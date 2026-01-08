@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 from datetime import timedelta
 
@@ -60,7 +61,7 @@ class FennoaBackend(models.Model):
         if not backend:
             raise UserError(
                 _("Please configure a Fennoa backend for company {}.").format(
-                    company.name
+                    backend.company_id.name
                 )
             )
 
@@ -148,13 +149,21 @@ class FennoaBackend(models.Model):
 
         _logger.debug("Sending request to Fennoa: %s", kwargs)
 
-        request = self._api_request_make(**kwargs)
+        try:
+            request = self._api_request_make(**kwargs)
+        except ValidationError as e:
+            _logger.error("Fennoa API request failed: %s", str(e))
+            error_msg = self._format_api_error_message(e)
+            raise ValidationError(error_msg) from e
+
         response = request.json().get("data") or request.json() or {}
 
         # TODO: different method for response handling / binding creation
-        if response.get("id"):
+        if not isinstance(response, dict):
+            external_id = None
+        elif response.get("id"):
             external_id = response.get("id")
-        elif len(response) == 1 and isinstance(response, dict):
+        elif len(response) == 1:
             external_id = list(response.values())[0].get("id")
         else:
             external_id = None
@@ -180,6 +189,23 @@ class FennoaBackend(models.Model):
                 self.env["fennoa.binding"].create(vals)
 
         return response
+
+    def _format_api_error_message(self, error):
+        """
+        Format API error message for user display.
+        """
+        error_dict = json.loads(str(error))
+        error_msg = ""
+        if isinstance(error_dict, dict):
+            messages = []
+            for key, value in error_dict.get("errors", {}).items():
+                errors = ", ".join(value) if isinstance(value, list) else value
+                messages.append(f"{key}: {errors}")
+            error_msg = "\n".join(messages)
+        else:
+            error_msg = str(error)
+
+        return error_msg
 
     # endregion constraints and helpers
 
@@ -351,8 +377,7 @@ class FennoaBackend(models.Model):
 
     # region API calls
     def _import_fennoa_customers(self):
-        response = self.api_get_customers()
-        customer_list = response.json().get("data", [])
+        customer_list = self.api_get_customers()
 
         if not customer_list:
             return "No customers to import"
@@ -362,7 +387,7 @@ class FennoaBackend(models.Model):
             if not customer:
                 continue
 
-            job_desc = _("Fennoa: import customer '[%(id)s]%(name)s'") % {
+            job_desc = _("Fennoa: import customer '[%(id)s] %(name)s'") % {
                 "id": customer.get("id") or "",
                 "name": customer.get("name") or "",
             }

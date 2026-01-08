@@ -19,7 +19,6 @@ class FennoaBinding(models.Model):
         comodel_name="fennoa.backend",
         string="Fennoa Backend",
         required=True,
-        ondelete="restrict",
         readonly=True,
     )
     company_id = fields.Many2one(
@@ -35,5 +34,4 @@ class FennoaBinding(models.Model):
     res_id = fields.Integer(
         string="Related Record ID",
         readonly=True,
-        ondelete="cascade",
     )
