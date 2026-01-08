@@ -10,7 +10,7 @@ class AccountMove(models.Model):
     _inherit = "account.move"
 
     fennoa_binding_count = fields.Integer(
-        string="Fennoa Logs",
+        string="Fennoa bindings",
         compute="_compute_fennoa_binding_count",
     )
     fennoa_binding_ids = fields.One2many(
@@ -40,11 +40,6 @@ class AccountMove(models.Model):
         readonly=True,
         copy=False,
         help="Timestamp when this invoice was successfully sent to Fennoa.",
-    )
-
-    fennoa_log_count = fields.Integer(
-        string="Fennoa Logs",
-        compute="_compute_fennoa_log_count",
     )
 
     fennoa_invoice_id = fields.Integer(
@@ -89,29 +84,6 @@ class AccountMove(models.Model):
         """Update record from Fennoa."""
         _logger.error("Importing record from Fennoa not implemented!")
         return True
-
-    def _compute_fennoa_log_count(self):
-        """Compute number of Fennoa bindings linked to this invoice."""
-        Binding = self.env["fennoa.binding"]
-        for move in self:
-            move.fennoa_log_count = Binding.search_count(
-                [("res_model", "=", "account.move"), ("res_id", "=", move.id)]
-            )
-
-    def action_view_fennoa_logs(self):
-        """Open Fennoa bindings related to this invoice."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Fennoa Logs"),
-            "res_model": "fennoa.binding",
-            "view_mode": "tree,form",
-            "domain": [("res_model", "=", "account.move"), ("res_id", "=", self.id)],
-            "context": {
-                "default_res_model": "account.move",
-                "default_res_id": self.id,
-            },
-        }
 
     def _fennoa_build_sales_invoice_payload(self):
         """Build FORM DATA payload for sending the sales invoice to Fennoa."""

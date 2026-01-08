@@ -25,7 +25,7 @@
     "website": "https://github.com/tawasta/connector-fennoa",
     "author": "Futural",
     "license": "AGPL-3",
-    "application": False,
+    "application": True,
     "installable": True,
     "depends": [
         "account",

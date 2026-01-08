@@ -29,6 +29,23 @@ class ResPartner(models.Model):
         for record in self:
             record.fennoa_binding_count = len(self.fennoa_binding_ids)
 
+    def get_combined_street(self):
+        """
+        Get combined string for street and street2
+        :return: String with streets
+        """
+        if not self:
+            # If function is called without records
+            return ""
+
+        self.ensure_one()
+        if self.street and self.street2:
+            street = f"{self.street} {self.street2}"
+        else:
+            street = self.street or ""
+
+        return street
+
     def action_view_fennoa_bindings(self):
         """Open Fennoa bindings related to this record."""
         self.ensure_one()
@@ -74,7 +91,7 @@ class ResPartner(models.Model):
             # If empty, Fennoa will generate a customer number
             "customer_no": self.ref or "",
             "name": self.name,
-            "address": self.street or "",
+            "address": self.get_combined_street(),
             "postalcode": self.zip or "",
             "city": self.city or "",
             "country_id": self.country_id.code or "",
@@ -85,7 +102,7 @@ class ResPartner(models.Model):
             "business_id": self.vat or "",
             "account_type_id": 1 if self.is_company else 2,
             # TODO: contact person handling, this is incorrect
-            "contact_person": self.child_ids[:1].name if self.child_ids else "",
+            # "contact_person": self.child_ids[:1].name if self.child_ids else "",
         }
         return payload
 
