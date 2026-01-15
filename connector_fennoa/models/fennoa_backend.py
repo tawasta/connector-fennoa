@@ -142,6 +142,8 @@ class FennoaBackend(models.Model):
 
         Designed to be called by a cron job and can also be run manually.
         """
+        # TODO: break this down to smaller methods
+        # TODO: move to account.payment -model. See res.partner for example.
         self.ensure_one()
         Move = self.env["account.move"]
         Payment = self.env["account.payment"]
@@ -288,24 +290,6 @@ class FennoaBackend(models.Model):
             "GET",
             endpoint,
             params=params,
-        )
-
-        return res
-
-    # -------------------------------------------------------------------------
-    # API: Sales Invoices
-    # -------------------------------------------------------------------------
-
-    def api_create_sales_invoice(self, invoice_data, move=None):
-        """Send a new sales invoice to Fennoa (FORM DATA)."""
-        self.ensure_one()
-
-        res = self._fennoa_api_request_make(
-            "POST",
-            "/sales_api/add",
-            form_payload=invoice_data,
-            related_model=move._name if move else None,
-            related_id=move.id if move else None,
         )
 
         return res

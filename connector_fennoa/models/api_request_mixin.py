@@ -2,9 +2,7 @@ import base64
 import json
 import logging
 
-from numpy import record
-
-from odoo import models,fields
+from odoo import models
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -16,13 +14,10 @@ class ApiRequestMixin(models.Model):
     def _get_fennoa_backend(self):
         company = self.company_id or self.env.company
 
-        backend = self.env["fennoa.backend"].search(
-            [("company_id", "=", company.id)]
-        )
+        backend = self.env["fennoa.backend"].search([("company_id", "=", company.id)])
 
         return backend
 
-            
     def _build_auth(self):
         """Return Fennoa API authentication tuple (username, password)."""
         raw = self._get_fennoa_backend().secret_key_b64 or ""
@@ -48,7 +43,6 @@ class ApiRequestMixin(models.Model):
             "Accept": "application/json",
             "User-Agent": "Futural-Odoo-Fennoa-Connector/1.0",
         }
-
 
     def _format_api_error_message(self, error):
         """
@@ -127,9 +121,10 @@ class ApiRequestMixin(models.Model):
 
         if external_id and related_model and related_id:
             FennoaBinding = self.env["fennoa.binding"].sudo()
+            backend = self._get_fennoa_backend()
             existing = FennoaBinding.search(
                 [
-                    ("fennoa_backend_id", "=", self.fennoa_backend_id.id),
+                    ("backend_id", "=", backend.id),
                     ("res_model", "=", related_model),
                     ("res_id", "=", related_id),
                     ("external_id", "=", external_id),
@@ -138,7 +133,7 @@ class ApiRequestMixin(models.Model):
             )
             if not existing:
                 vals = {
-                    "fennoa_backend_id": self.fennoa_backend_id.id,
+                    "backend_id": backend.id,
                     "res_model": related_model,
                     "res_id": related_id,
                     "external_id": external_id,

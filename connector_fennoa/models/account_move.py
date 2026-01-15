@@ -7,7 +7,8 @@ _logger = logging.getLogger(__name__)
 
 
 class AccountMove(models.Model):
-    _inherit = "account.move"
+    _name = "account.move"
+    _inherit = ["account.move", "api.request.mixin"]
 
     fennoa_binding_count = fields.Integer(
         string="Fennoa bindings",
@@ -18,6 +19,11 @@ class AccountMove(models.Model):
         inverse_name="res_id",
         string="Fennoa Bindings",
         domain=[("res_model", "=", "account.move")],
+    )
+    fennoa_binding_id = fields.Many2one(
+        comodel_name="fennoa.binding",
+        string="Fennoa Binding",
+        compute="_compute_fennoa_binding_id",
     )
     fennoa_export = fields.Boolean(
         string="Export to Fennoa",
@@ -53,6 +59,23 @@ class AccountMove(models.Model):
         for record in self:
             record.fennoa_binding_count = len(self.fennoa_binding_ids)
 
+    def _compute_fennoa_binding_id(self):
+        """
+        Helper for getting the correct binding for this record.
+        """
+        FennoaBinding = self.env["fennoa.binding"].sudo()
+        for record in self:
+            binding = FennoaBinding.search(
+                [
+                    ("res_model", "=", "account.move"),
+                    ("res_id", "=", record.id),
+                    ("company_id", "=", record.company_id.id),
+                ],
+                limit=1,
+            )
+
+            record.fennoa_binding_id = binding.id if binding else False
+
     @api.depends("date", "auto_post")
     def _compute_hide_post_button(self):
         # Hide "Confirm"-button if fennoa_export is enabled
@@ -85,7 +108,7 @@ class AccountMove(models.Model):
         _logger.error("Importing record from Fennoa not implemented!")
         return True
 
-    def _fennoa_build_sales_invoice_payload(self):
+    def fennoa_export_mapper(self) -> dict:
         """Build FORM DATA payload for sending the sales invoice to Fennoa."""
         self.ensure_one()
         # TODO: use exporter
@@ -156,6 +179,7 @@ class AccountMove(models.Model):
 
         # Add invoice lines: row[1][...], row[2][...] etc.
         i = 1
+        # TODO: separate row mapper
         for line in self.invoice_line_ids:
             vatpercent = 0.0
             if len(line.tax_ids) > 1:
@@ -179,8 +203,12 @@ class AccountMove(models.Model):
                 qty = -abs(qty)
                 price = abs(price)
 
+            product_id = line.product_id
+
+            if product_id and product_id.default_code:
+                payload[f"row[{i}][product_code]"] = product_id.default_code
             payload[f"row[{i}][name]"] = (
-                line.product_id.display_name if line.product_id else (line.name or "")
+                product_id.display_name if product_id else (line.name or "")
             )
             payload[f"row[{i}][description]"] = line.name or ""
             payload[f"row[{i}][price]"] = str(price)
@@ -189,6 +217,10 @@ class AccountMove(models.Model):
                 line.product_uom_id.name if line.product_uom_id else ""
             )
             payload[f"row[{i}][vatpercent]"] = str(vatpercent)
+
+            # TODO: account code
+            # TODO: discount percent
+            # TODO: dimension
             i += 1
 
         return payload
@@ -213,19 +245,9 @@ class AccountMove(models.Model):
         # Ensure customer exists in Fennoa and is up to date
         self.partner_id.fennoa_export_record()
 
-        backend = self.env["fennoa.backend"].search(
-            [("company_id", "=", self.company_id.id)],
-            limit=1,
-        )
-        if not backend:
-            raise UserError(
-                _("No Fennoa backend configured for company %s.")
-                % (self.company_id.display_name,)
-            )
+        payload = self.fennoa_export_mapper()
 
-        payload = self._fennoa_build_sales_invoice_payload()
-
-        backend.api_create_sales_invoice(payload, move=self)
+        self.fennoa_api_create_sales_invoice(payload)
 
         self.write(
             {
@@ -241,6 +263,10 @@ class AccountMove(models.Model):
         )
 
         # TODO: auto-approve (add to connector config)
+        auto_approve = True
+        if auto_approve:
+            self.fennoa_api_approve_sales_invoice()
+
         # TODO: auto-send (add to connector config)
 
     def action_fennoa_export_invoice(self):
@@ -295,5 +321,40 @@ class AccountMove(models.Model):
         sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_export)
         if sale_invoices:
             sale_invoices.action_fennoa_export_invoice()
+
+        return res
+
+    def fennoa_api_create_sales_invoice(self, payload):
+        """Send a new sales invoice to Fennoa (FORM DATA)."""
+        res = self._fennoa_api_request_make(
+            "POST",
+            "/sales_api/add",
+            form_payload=payload,
+            related_model=self._name,
+            related_id=self.id,
+        )
+
+        return res
+
+    def fennoa_api_approve_sales_invoice(self):
+        """Approve a sales invoice in Fennoa by its ID."""
+        fennoa_id = self.fennoa_binding_id.external_id
+        res = self._fennoa_api_request_make(
+            "POST",
+            f"/sales_api/do/approve/{fennoa_id}",
+            related_model=self._name,
+            related_id=self.id,
+        )
+
+        return res
+
+    def fennoa_api_send_sales_invoice(self, fennoa_id):
+        """Send a sales invoice in Fennoa by its ID."""
+        res = self._fennoa_api_request_make(
+            "POST",
+            f"/sales_api/do/send/{fennoa_id}",
+            related_model=self._name,
+            related_id=self.id,
+        )
 
         return res
