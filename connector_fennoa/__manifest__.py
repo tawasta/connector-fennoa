@@ -33,7 +33,6 @@
         "api_request_handler",
         "connector",
         "l10n_fi_edicode",
-        "sale",
     ],
     "data": [
         "security/ir_model_access.xml",
