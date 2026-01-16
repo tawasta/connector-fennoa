@@ -39,6 +39,7 @@
         "data/queue_job_channel.xml",
         "data/queue_job_function.xml",
         "data/cron.xml",
+        "views/account_fiscal_position.xml",
         "views/account_move.xml",
         "views/account_payment.xml",
         "views/fennoa_backend_form.xml",
