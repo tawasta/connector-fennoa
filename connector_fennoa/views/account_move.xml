@@ -55,7 +55,14 @@
                                 groups="base.group_no_one"
                                 widget="boolean_toggle"
                             />
-                            <field name="fennoa_sent" readonly="1" />
+                            <field
+                                name="fennoa_sent_date"
+                                invisible="not fennoa_sent_date"
+                            />
+                            <field
+                                name="fennoa_invoice_id"
+                                invisible="not fennoa_invoice_id"
+                            />
                             <field name="fennoa_binding_count" invisible="1" />
                         </group>
                         <group>

@@ -26,6 +26,17 @@ class AccountMove(models.Model):
         string="Fennoa Binding",
         compute="_compute_fennoa_binding_id",
     )
+    fennoa_invoice_id = fields.Integer(
+        string="Fennoa Invoice ID",
+        related="fennoa_binding_id.external_id",
+        compute="_compute_fennoa_binding_id",
+    )
+
+    fennoa_invoice_number = fields.Char(
+        readonly=True,
+        copy=False,
+    )
+
     fennoa_export = fields.Boolean(
         string="Export to Fennoa",
         help="Disable this to prevent exporting partner to Fennoa",
@@ -42,18 +53,11 @@ class AccountMove(models.Model):
         ),
     )
 
-    fennoa_sent = fields.Datetime(
+    fennoa_sent_date = fields.Datetime(
         string="Sent to Fennoa",
         readonly=True,
         copy=False,
         help="Timestamp when this invoice was successfully sent to Fennoa.",
-    )
-
-    fennoa_invoice_id = fields.Integer(
-        string="Fennoa Invoice ID",
-        readonly=True,
-        help="ID of the invoice in Fennoa.",
-        index=True,
     )
 
     def _compute_fennoa_binding_count(self):
@@ -66,6 +70,11 @@ class AccountMove(models.Model):
         """
         FennoaBinding = self.env["fennoa.binding"].sudo()
         for record in self:
+            vals = {
+                "fennoa_binding_id": False,
+                "fennoa_invoice_id": False,
+            }
+
             binding = FennoaBinding.search(
                 [
                     ("res_model", "=", "account.move"),
@@ -75,7 +84,15 @@ class AccountMove(models.Model):
                 limit=1,
             )
 
-            record.fennoa_binding_id = binding.id if binding else False
+            if binding:
+                vals.update(
+                    {
+                        "fennoa_binding_id": binding.id,
+                        "fennoa_invoice_id": binding.external_id,
+                    }
+                )
+
+            record.write(vals)
 
     @api.depends("date", "auto_post")
     def _compute_hide_post_button(self):
@@ -184,7 +201,9 @@ class AccountMove(models.Model):
         return True
 
     def fennoa_export_mapper(self) -> dict:
-        """Build FORM DATA payload for sending the sales invoice to Fennoa."""
+        """
+        Map Odoo invoice values to Fennoa sales invoice payload.
+        """
         self.ensure_one()
         # TODO: use exporter mapper
         # TODO: separate method for validation
@@ -280,7 +299,7 @@ class AccountMove(models.Model):
             product_id = line.product_id
 
             if product_id and product_id.default_code:
-                payload[f"row[{i}][product_code]"] = product_id.default_code
+                payload[f"row[{i}][product_no]"] = product_id.default_code
             payload[f"row[{i}][name]"] = (
                 product_id.display_name if product_id else (line.name or "")
             )
@@ -325,7 +344,7 @@ class AccountMove(models.Model):
 
         self.write(
             {
-                "fennoa_sent": fields.Datetime.now(),
+                "fennoa_sent_date": fields.Datetime.now(),
             }
         )
 

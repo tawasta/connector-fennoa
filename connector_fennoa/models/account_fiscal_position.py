@@ -5,7 +5,7 @@ class AccountFiscalPosition(models.Model):
     _inherit = "account.fiscal.position"
 
     fennoa_tax_class_id = fields.Selection(
-        selection=[ 
+        selection=[
             ("1", "Domestic sales (S) Default"),
             ("2", "EU-sales services (K)"),
             ("3", "EU-sales goods (K)"),
@@ -17,4 +17,4 @@ class AccountFiscalPosition(models.Model):
             ("9", "Domestic sales, VAT-free, No VAT-liability (O)"),
         ],
         string="Fennoa Tax Class",
-        )
+    )
