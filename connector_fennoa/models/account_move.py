@@ -2,12 +2,14 @@ import logging
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
 
 class AccountMove(models.Model):
-    _inherit = "account.move"
+    _name = "account.move"
+    _inherit = ["account.move", "api.request.mixin"]
 
     fennoa_binding_count = fields.Integer(
         string="Fennoa bindings",
@@ -19,6 +21,22 @@ class AccountMove(models.Model):
         string="Fennoa Bindings",
         domain=[("res_model", "=", "account.move")],
     )
+    fennoa_binding_id = fields.Many2one(
+        comodel_name="fennoa.binding",
+        string="Fennoa Binding",
+        compute="_compute_fennoa_binding_id",
+    )
+    fennoa_invoice_id = fields.Integer(
+        string="Fennoa Invoice ID",
+        related="fennoa_binding_id.external_id",
+        compute="_compute_fennoa_binding_id",
+    )
+
+    fennoa_invoice_number = fields.Char(
+        readonly=True,
+        copy=False,
+    )
+
     fennoa_export = fields.Boolean(
         string="Export to Fennoa",
         help="Disable this to prevent exporting partner to Fennoa",
@@ -35,23 +53,46 @@ class AccountMove(models.Model):
         ),
     )
 
-    fennoa_sent = fields.Datetime(
+    fennoa_sent_date = fields.Datetime(
         string="Sent to Fennoa",
         readonly=True,
         copy=False,
         help="Timestamp when this invoice was successfully sent to Fennoa.",
     )
 
-    fennoa_invoice_id = fields.Integer(
-        string="Fennoa Invoice ID",
-        readonly=True,
-        help="ID of the invoice in Fennoa.",
-        index=True,
-    )
-
     def _compute_fennoa_binding_count(self):
         for record in self:
             record.fennoa_binding_count = len(self.fennoa_binding_ids)
+
+    def _compute_fennoa_binding_id(self):
+        """
+        Helper for getting the correct binding for this record.
+        """
+        FennoaBinding = self.env["fennoa.binding"].sudo()
+        for record in self:
+            vals = {
+                "fennoa_binding_id": False,
+                "fennoa_invoice_id": False,
+            }
+
+            binding = FennoaBinding.search(
+                [
+                    ("res_model", "=", "account.move"),
+                    ("res_id", "=", record.id),
+                    ("company_id", "=", record.company_id.id),
+                ],
+                limit=1,
+            )
+
+            if binding:
+                vals.update(
+                    {
+                        "fennoa_binding_id": binding.id,
+                        "fennoa_invoice_id": binding.external_id,
+                    }
+                )
+
+            record.write(vals)
 
     @api.depends("date", "auto_post")
     def _compute_hide_post_button(self):
@@ -61,6 +102,80 @@ class AccountMove(models.Model):
             record.hide_post_button = record.fennoa_export
 
         return res
+
+    def _get_fennoa_tax_class_id(self) -> int:
+        """
+        Get the Fennoa tax class ID for this invoice.
+        """
+        self.ensure_one()
+        if not self.fiscal_position_id:
+            raise ValidationError(
+                _("Invoice '%s' has no fiscal position set.", self.display_name)
+            )
+        tax_class_id = self.fiscal_position_id.fennoa_tax_class_id
+
+        if not tax_class_id:
+            raise ValidationError(
+                _(
+                    "Fiscal position '%s' has no Fennoa tax class set. ",
+                    self.fiscal_position_id.display_name,
+                )
+            )
+        return int(tax_class_id)
+
+    def _get_fennoa_invoice_type_id(self) -> int:
+        """
+        Get the Fennoa invoice type ID for this invoice.
+        1 = Sales invoice
+        2 = Credit note
+        3 = Cash invoice
+        """
+        self.ensure_one()
+        if self.move_type == "out_invoice":
+            return 1
+        elif self.move_type == "out_refund":
+            return 2
+        else:
+            raise ValidationError(
+                _(
+                    "Unsupported move type '%s' for Fennoa invoice type.",
+                    self.move_type,
+                )
+            )
+
+    def _get_fennoa_locale_code(self) -> str:
+        """
+        Get the Fennoa locale code for this invoice based on the partner's language.
+        Defaults to english
+        """
+        self.ensure_one()
+        lang_code = self.partner_id.lang or "en_US"
+        if lang_code == "fi_FI":
+            return "fi"
+        elif lang_code == "sv_SE":
+            return "sv"
+        else:
+            return "en"
+
+    def _get_fennoa_delivery_method(self) -> str:
+        """
+        Get the Fennoa delivery method for this invoice.
+        Options: email, postal, finvoice (einvoice)
+        Defaults to postal
+        """
+        self.ensure_one()
+        delivery_method = "postal"
+
+        if self.transmit_method_id and self.transmit_method_id.code:
+            code = self.transmit_method_id.code.lower()
+            if code == "einvoice":
+                delivery_method = "finvoice"
+            elif code in ["mail", "email"]:
+                delivery_method = "email"
+            elif code == "post":
+                delivery_method = "postal"
+
+        return delivery_method
 
     def action_view_fennoa_bindings(self):
         """Open Fennoa bindings related to this record."""
@@ -85,10 +200,12 @@ class AccountMove(models.Model):
         _logger.error("Importing record from Fennoa not implemented!")
         return True
 
-    def _fennoa_build_sales_invoice_payload(self):
-        """Build FORM DATA payload for sending the sales invoice to Fennoa."""
+    def fennoa_export_mapper(self) -> dict:
+        """
+        Map Odoo invoice values to Fennoa sales invoice payload.
+        """
         self.ensure_one()
-        # TODO: use exporter
+        # TODO: use exporter mapper
         # TODO: separate method for validation
         partner = self.partner_id
         if not partner:
@@ -104,58 +221,58 @@ class AccountMove(models.Model):
                 _("Invoice date and due date must be set before sending to Fennoa.")
             )
 
-        delivery_method = "postal"
         einvoice_address = False
         einvoice_operator = False
+        delivery_method = self._get_fennoa_delivery_method()
 
-        if self.transmit_method_id and self.transmit_method_id.code:
-            code = self.transmit_method_id.code.lower()
-            if code == "einvoice":
-                delivery_method = "finvoice"
-                einvoice_address = partner.edicode or False
-                einvoice_operator = (
-                    partner.einvoice_operator_id.name
-                    if partner.einvoice_operator_id
-                    else False
-                )
-            elif code == "mail":
-                delivery_method = "email"
-                einvoice_address = partner.email or False
-                einvoice_operator = False
-            elif code == "post":
-                delivery_method = "postal"
+        if delivery_method == "finvoice":
+            einvoice_address = partner.edicode or False
+            einvoice_operator = (
+                partner.einvoice_operator_id.name
+                if partner.einvoice_operator_id
+                else False
+            )
+        elif delivery_method == "email":
+            einvoice_address = partner.email or False
 
         payload = {
             "customer_no": partner.ref or "",
             "account_type_id": 1 if partner.is_company else 2,
             "name": partner.name,
-            "address": partner.street or "",
+            # "name2": "" // Secondary name of the customer
+            "address": partner.get_combined_street(),
             "postalcode": partner.zip or "",
             "city": partner.city or "",
             "country": partner.country_id.code or "",
             "phone": partner.phone or "",
+            "sales_invoice_taxclass_id": self._get_fennoa_tax_class_id(),
             "email": partner.email or "",
-            "invoice_type_id": 1 if self.move_type == "out_invoice" else 2,
+            "invoice_type_id": self._get_fennoa_invoice_type_id(),
             "vat_number": partner.vat or "",
             "currency": self.currency_id.name or "EUR",
             "invoice_date": self.invoice_date.strftime("%Y-%m-%d"),
             "due_date": self.invoice_date_due.strftime("%Y-%m-%d"),
-            "our_reference": self.invoice_user_id.name or "",
+            # "shipping_date": "" // Shipping date of the invoice
+            # Omitting payment reference will force Fennoa to calculate it
+            # "banking_reference": self.payment_reference or "",
+            "locale": self._get_fennoa_locale_code(),
+            # "our_reference": self.invoice_user_id.name or "",
             "your_reference": self.ref or "",
+            "contact_person": self.invoice_user_id.name or "",
+            # "penal_interest": "" // TODO: inherit account_invoice_overdue_interest
+            "notes_before": html2plaintext(self.narration) or "",
             "delivery_method": delivery_method,
+            "notes_internal": self.description or "",
         }
 
         if einvoice_address:
             payload["einvoice_address"] = einvoice_address
         if einvoice_operator:
             payload["einvoice_operator"] = einvoice_operator
-        if self.payment_reference:
-            payload["banking_reference"] = self.payment_reference
-
-        # TODO: Add additional fields based on full Fennoa documentation.
 
         # Add invoice lines: row[1][...], row[2][...] etc.
         i = 1
+        # TODO: separate row mapper
         for line in self.invoice_line_ids:
             vatpercent = 0.0
             if len(line.tax_ids) > 1:
@@ -179,8 +296,12 @@ class AccountMove(models.Model):
                 qty = -abs(qty)
                 price = abs(price)
 
+            product_id = line.product_id
+
+            if product_id and product_id.default_code:
+                payload[f"row[{i}][product_no]"] = product_id.default_code
             payload[f"row[{i}][name]"] = (
-                line.product_id.display_name if line.product_id else (line.name or "")
+                product_id.display_name if product_id else (line.name or "")
             )
             payload[f"row[{i}][description]"] = line.name or ""
             payload[f"row[{i}][price]"] = str(price)
@@ -189,6 +310,10 @@ class AccountMove(models.Model):
                 line.product_uom_id.name if line.product_uom_id else ""
             )
             payload[f"row[{i}][vatpercent]"] = str(vatpercent)
+
+            # payload[f"row[{i}][account_code]"] = line.account_id.code or ""
+            # payload[f"row[{i}][discount_percent]"] = line.discount or 0.0
+            # TODO: dimension
             i += 1
 
         return payload
@@ -213,23 +338,13 @@ class AccountMove(models.Model):
         # Ensure customer exists in Fennoa and is up to date
         self.partner_id.fennoa_export_record()
 
-        backend = self.env["fennoa.backend"].search(
-            [("company_id", "=", self.company_id.id)],
-            limit=1,
-        )
-        if not backend:
-            raise UserError(
-                _("No Fennoa backend configured for company %s.")
-                % (self.company_id.display_name,)
-            )
+        payload = self.fennoa_export_mapper()
 
-        payload = self._fennoa_build_sales_invoice_payload()
-
-        backend.api_create_sales_invoice(payload, move=self)
+        self.fennoa_api_create_sales_invoice(payload)
 
         self.write(
             {
-                "fennoa_sent": fields.Datetime.now(),
+                "fennoa_sent_date": fields.Datetime.now(),
             }
         )
 
@@ -241,6 +356,10 @@ class AccountMove(models.Model):
         )
 
         # TODO: auto-approve (add to connector config)
+        auto_approve = True
+        if auto_approve:
+            self.fennoa_api_approve_sales_invoice()
+
         # TODO: auto-send (add to connector config)
 
     def action_fennoa_export_invoice(self):
@@ -295,5 +414,40 @@ class AccountMove(models.Model):
         sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_export)
         if sale_invoices:
             sale_invoices.action_fennoa_export_invoice()
+
+        return res
+
+    def fennoa_api_create_sales_invoice(self, payload):
+        """Send a new sales invoice to Fennoa (FORM DATA)."""
+        res = self._fennoa_api_request_make(
+            "POST",
+            "/sales_api/add",
+            form_payload=payload,
+            related_model=self._name,
+            related_id=self.id,
+        )
+
+        return res
+
+    def fennoa_api_approve_sales_invoice(self):
+        """Approve a sales invoice in Fennoa by its ID."""
+        fennoa_id = self.fennoa_binding_id.external_id
+        res = self._fennoa_api_request_make(
+            "POST",
+            f"/sales_api/do/approve/{fennoa_id}",
+            related_model=self._name,
+            related_id=self.id,
+        )
+
+        return res
+
+    def fennoa_api_send_sales_invoice(self, fennoa_id):
+        """Send a sales invoice in Fennoa by its ID."""
+        res = self._fennoa_api_request_make(
+            "POST",
+            f"/sales_api/do/send/{fennoa_id}",
+            related_model=self._name,
+            related_id=self.id,
+        )
 
         return res
