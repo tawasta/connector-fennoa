@@ -1,6 +1,6 @@
 import logging
 
-from odoo import _, models
+from odoo import _, fields, models
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ class AccountPayment(models.Model):
     _name = "account.payment"
     _inherit = ["account.payment", "api.request.mixin", "fennoa.binding.mixin"]
 
-    def fennoa_import_record(self, values, company_id):
+    def _fennoa_import_record(self, values, company_id):
         """
         Import payment data from Fennoa into Odoo as a payment.
         :param values: Payment data from Fennoa API
@@ -103,3 +103,40 @@ class AccountPayment(models.Model):
                     fennoa_invoice_id,
                 )
             )
+
+    def fennoa_export_mapper(self):
+        vals = {
+            "invoice_no": self.ref,
+            "payment_date": self.date.strftime("%Y-%m-%d"),
+            "sum": self.amount,
+            # TODO: Map payment method
+            "payment_type": 2,
+            "is_factoring": 0,
+            "description": self.ref or "",
+        }
+        return vals
+
+    def _fennoa_export_record(self):
+        """
+        Export payment to Fennoa
+        """
+        self.ensure_one()
+        payload = self.fennoa_export_mapper()
+        result = self.fennoa_api_create_payment(payload)
+        self.fennoa_sent_date = fields.Datetime.now()
+        self.message_post(body=_("Exported payment to Fennoa"))
+        return result
+
+    def fennoa_api_create_payment(self, payload):
+        """
+        Create a new payment in Fennoa using
+        """
+        res = self._fennoa_api_request_make(
+            "POST",
+            "/sales_api/add/payment",
+            values=payload,
+            related_model=self._name if self else None,
+            related_id=self.id if self else None,
+        )
+
+        return res

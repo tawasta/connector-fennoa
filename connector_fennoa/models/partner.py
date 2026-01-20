@@ -49,14 +49,12 @@ class ResPartner(models.Model):
         return payload
 
     @api.model
-    def fennoa_export_record(self):
+    def _fennoa_export_record(self):
         """
-        Export partner as a customer to Fennoa if not already exported.
+        Export or update Partner to Fennoa as a Customer.
+        :return: Response from Fennoa API
         """
         self.ensure_one()
-
-        if not self.fennoa_export:
-            return
 
         backend = (
             self.env["fennoa.backend"]
@@ -122,7 +120,7 @@ class ResPartner(models.Model):
 
         return vals
 
-    def fennoa_import_record(self, fennoa_id=False):
+    def _fennoa_import_record(self, fennoa_id=False):
         """
         Import customer data from Fennoa into Odoo as a partner.
         :param fennoa_id: Fennoa customer ID to import

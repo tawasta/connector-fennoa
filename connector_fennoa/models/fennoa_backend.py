@@ -195,7 +195,7 @@ class FennoaBackend(models.Model):
             }
 
             jobs += 1
-            Partner.with_delay(description=job_desc).fennoa_import_record(
+            Partner.with_delay(description=job_desc)._fennoa_import_record(
                 int(fennoa_id)
             )
 
@@ -254,7 +254,7 @@ class FennoaBackend(models.Model):
             }
 
             jobs += 1
-            Payment.with_delay(description=job_desc).fennoa_import_record(
+            Payment.with_delay(description=job_desc)._fennoa_import_record(
                 payment,
                 self.company_id,
             )

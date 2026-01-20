@@ -14,12 +14,7 @@ class AccountMove(models.Model):
     _inherit = ["account.move", "api.request.mixin", "fennoa.binding.mixin"]
 
     # region Fields
-    fennoa_sent_date = fields.Datetime(
-        string="Sent to Fennoa",
-        readonly=True,
-        copy=False,
-        help="Timestamp when this invoice was successfully sent to Fennoa.",
-    )
+
     # endregion
 
     # region Compute and helper methods
@@ -229,6 +224,7 @@ class AccountMove(models.Model):
     # endregion
 
     # region Actions
+    # TODO: This overwrites the mixin method, and could be handled better
     def action_fennoa_export_record(self):
         """
         Export (send) invoice(s) to Fennoa.
@@ -244,7 +240,7 @@ class AccountMove(models.Model):
 
         if len(sale_moves) == 1 and not sale_moves.fennoa_delayed_send:
             # Direct send for a single invoice (no background job)
-            sale_moves.fennoa_export_record()
+            sale_moves._fennoa_export_record()
         else:
             # Schedule one background job per invoice (queue_job / with_delay)
             for move in sale_moves:
@@ -257,7 +253,7 @@ class AccountMove(models.Model):
                     description=job_desc,
                     priority=10,
                     max_retries=5,
-                ).fennoa_export_record()
+                )._fennoa_export_record()
 
         return True
 
@@ -302,17 +298,25 @@ class AccountMove(models.Model):
 
         return res
 
-    def fennoa_export_record(self):
+    def write(self, vals):
+        res = super().write(vals)
+
+        if vals.get("payment_id"):
+            for record in self.filtered(lambda r: r.is_entry()):
+                # Send the payment to Fennoa
+                job_desc = (
+                    "Fennoa: send payment for invoice %s to Fennoa",
+                    record.display_name,
+                )
+                record.payment_id.with_delay(
+                    description=job_desc
+                )._fennoa_export_record()
+
+        return res
+
+    def _fennoa_export_record(self):
         """Send a single invoice to Fennoa (called directly or via with_delay)."""
         self.ensure_one()
-
-        if self.fennoa_binding_id:
-            raise UserError(
-                _("Invoice %s has already been exported to Fennoa.") % self.display_name
-            )
-
-        if not self.fennoa_export:
-            raise UserError(_("Fennoa export not enabled for this invoice."))
 
         if self.move_type not in ("out_invoice", "out_refund"):
             raise UserError(
@@ -325,17 +329,13 @@ class AccountMove(models.Model):
             )
 
         # Ensure customer exists in Fennoa and is up to date
-        self.partner_id.fennoa_export_record()
+        self.partner_id.action_fennoa_export_record()
 
         payload = self.fennoa_export_mapper()
 
         self.fennoa_api_create_sales_invoice(payload)
 
-        self.write(
-            {
-                "fennoa_sent_date": fields.Datetime.now(),
-            }
-        )
+        self.fennoa_sent_date = fields.Datetime.now()
 
         self.message_post(
             body=_("Invoice was sent to Fennoa"),

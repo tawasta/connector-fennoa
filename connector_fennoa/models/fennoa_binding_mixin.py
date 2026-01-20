@@ -1,5 +1,6 @@
-from odoo import models, fields, _
+from odoo import _, fields, models
 from odoo.exceptions import UserError
+
 
 class FennoaBindingMixin(models.AbstractModel):
     _name = "fennoa.binding.mixin"
@@ -44,7 +45,7 @@ class FennoaBindingMixin(models.AbstractModel):
         readonly=True,
         copy=False,
         help="Timestamp when this invoice was successfully sent to Fennoa.",
-    )    
+    )
 
     def _compute_fennoa_binding_count(self):
         for record in self:
@@ -88,24 +89,35 @@ class FennoaBindingMixin(models.AbstractModel):
 
     def action_fennoa_export_record(self):
         """Export record to Fennoa"""
-        if not hasattr(self, "fennoa_export_record"):
+        if not hasattr(self, "_fennoa_export_record"):
             raise UserError(
-                _("The model '%s' does not implement 'fennoa_export_record' method.")
+                _("The model '%s' does not implement '_fennoa_export_record' method.")
                 % self._name
             )
 
         for record in self:
-            record.fennoa_export_record()
+            if record.fennoa_binding_id:
+                raise UserError(
+                    _(
+                        "Record '%s' has already been exported to Fennoa.",
+                        record.display_name,
+                    )
+                )
+
+            if not record.fennoa_export:
+                raise UserError(_("Fennoa export not enabled for this record."))
+
+            record._fennoa_export_record()
         return True
 
     def action_fennoa_import_record(self):
         """Update record from Fennoa."""
-        if not hasattr(self, "fennoa_import_record"):
+        if not hasattr(self, "_fennoa_import_record"):
             raise UserError(
-                _("The model '%s' does not implement 'fennoa_import_record' method.")
+                _("The model '%s' does not implement '_fennoa_import_record' method.")
                 % self._name
             )
 
         for record in self:
-            record.fennoa_import_record()
+            record._fennoa_import_record()
         return True
