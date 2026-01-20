@@ -52,9 +52,17 @@ class ApiRequestMixin(models.Model):
         error_msg = ""
         if isinstance(error_dict, dict):
             messages = []
-            for key, value in error_dict.get("errors", {}).items():
-                errors = ", ".join(value) if isinstance(value, list) else value
-                messages.append(f"{key}: {errors}")
+            errors = error_dict.get("errors", {})
+
+            if isinstance(errors, dict):
+                for key, value in errors.items():
+                    errors = ", ".join(value) if isinstance(value, list) else value
+                    messages.append(f"{key}: {errors}")
+                error_msg = "\n".join(messages)
+            elif isinstance(errors, list):
+                for err in errors:
+                    messages.append(str(err))
+
             error_msg = "\n".join(messages)
         else:
             error_msg = str(error)
@@ -65,14 +73,12 @@ class ApiRequestMixin(models.Model):
         self,
         method,
         endpoint,
-        *,
         params=None,
         values=None,
-        form_payload=None,
-        json_payload=None,
+        files=None,
         related_model=None,
         related_id=None,
-    ):
+    ) -> dict:
         """
         Perform HTTP request to Fennoa API and log request/response.
         """
@@ -80,22 +86,14 @@ class ApiRequestMixin(models.Model):
         auth = self._build_auth()
         headers = self._get_headers()
 
-        if json_payload is not None:
-            headers["Content-Type"] = "application/json"
-            payload = json_payload
-        elif form_payload is not None:
-            payload = form_payload
-        else:
-            payload = None
-
         kwargs = {
             "auth": auth,
             "headers": headers,
             "params": params or {},
             "values": values or {},
+            "files": files or {},
             "endpoint": url,
             "method": method,
-            "payload": payload,
         }
 
         _logger.debug("Sending request to Fennoa: %s", kwargs)

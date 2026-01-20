@@ -4,6 +4,8 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import html2plaintext
 
+from odoo.addons.queue_job.delay import group
+
 _logger = logging.getLogger(__name__)
 
 
@@ -26,15 +28,10 @@ class AccountMove(models.Model):
         string="Fennoa Binding",
         compute="_compute_fennoa_binding_id",
     )
-    fennoa_invoice_id = fields.Integer(
+    fennoa_id = fields.Integer(
         string="Fennoa Invoice ID",
         related="fennoa_binding_id.external_id",
         compute="_compute_fennoa_binding_id",
-    )
-
-    fennoa_invoice_number = fields.Char(
-        readonly=True,
-        copy=False,
     )
 
     fennoa_export = fields.Boolean(
@@ -72,12 +69,12 @@ class AccountMove(models.Model):
         for record in self:
             vals = {
                 "fennoa_binding_id": False,
-                "fennoa_invoice_id": False,
+                "fennoa_id": False,
             }
 
             binding = FennoaBinding.search(
                 [
-                    ("res_model", "=", "account.move"),
+                    ("res_model", "=", self._name),
                     ("res_id", "=", record.id),
                     ("company_id", "=", record.company_id.id),
                 ],
@@ -88,7 +85,7 @@ class AccountMove(models.Model):
                 vals.update(
                     {
                         "fennoa_binding_id": binding.id,
-                        "fennoa_invoice_id": binding.external_id,
+                        "fennoa_id": binding.external_id,
                     }
                 )
 
@@ -262,7 +259,8 @@ class AccountMove(models.Model):
             # "penal_interest": "" // TODO: inherit account_invoice_overdue_interest
             "notes_before": html2plaintext(self.narration) or "",
             "delivery_method": delivery_method,
-            "notes_internal": self.description or "",
+            # TODO: internal notes
+            # "notes_internal": self.description or "",
         }
 
         if einvoice_address:
@@ -300,9 +298,7 @@ class AccountMove(models.Model):
 
             if product_id and product_id.default_code:
                 payload[f"row[{i}][product_no]"] = product_id.default_code
-            payload[f"row[{i}][name]"] = (
-                product_id.display_name if product_id else (line.name or "")
-            )
+            payload[f"row[{i}][name]"] = product_id.name if product_id else ""
             payload[f"row[{i}][description]"] = line.name or ""
             payload[f"row[{i}][price]"] = str(price)
             payload[f"row[{i}][quantity]"] = str(qty)
@@ -311,8 +307,8 @@ class AccountMove(models.Model):
             )
             payload[f"row[{i}][vatpercent]"] = str(vatpercent)
 
-            # payload[f"row[{i}][account_code]"] = line.account_id.code or ""
-            # payload[f"row[{i}][discount_percent]"] = line.discount or 0.0
+            payload[f"row[{i}][account_code]"] = line.account_id.code or ""
+            payload[f"row[{i}][discount_percent]"] = line.discount or 0.0
             # TODO: dimension
             i += 1
 
@@ -348,19 +344,27 @@ class AccountMove(models.Model):
             }
         )
 
-        # TODO: fetch and save Fennoa invoice number?
-
         self.message_post(
             body=_("Invoice was sent to Fennoa"),
             subtype_xmlid="mail.mt_note",
         )
 
-        # TODO: auto-approve (add to connector config)
-        auto_approve = True
-        if auto_approve:
-            self.fennoa_api_approve_sales_invoice()
+        delayables = []
+
+        job_desc = f"Fennoa: approve invoice ID {self.id}"
+        delayables.append(
+            self.delayable(description=job_desc).action_fennoa_approve_invoice()
+        )
+
+        job_desc = f"Fennoa: fetch invoice number for invoice ID {self.id}"
+        delayables.append(
+            self.delayable(description=job_desc).action_fennoa_get_invoice_number()
+        )
 
         # TODO: auto-send (add to connector config)
+        # job_send_to_customer = self.delayable().action_fennoa_send_invoice()
+
+        group(*delayables).delay()
 
     def action_fennoa_export_invoice(self):
         """
@@ -404,6 +408,32 @@ class AccountMove(models.Model):
 
         return True
 
+    def action_fennoa_approve_invoice(self):
+        """Approve invoice(s) in Fennoa."""
+        for record in self:
+            record.fennoa_api_approve_sales_invoice()
+            record.message_post(
+                body=_("Invoice approved in Fennoa."),
+                subtype_xmlid="mail.mt_note",
+            )
+        return True
+
+    def action_fennoa_get_invoice_number(self):
+        """
+        Fetch and update the invoice number from Fennoa
+        """
+        for record in self:
+            res = self.fennoa_api_get_sales_invoice(record.fennoa_id)
+            sale_invoice = res.get("SalesInvoice", {})
+            invoice_no = sale_invoice.get("invoice_no")
+
+            if invoice_no and invoice_no != record.name:
+                record.message_post(
+                    body=_("Fetched invoice number '%s' from Fennoa." % invoice_no),
+                    subtype_xmlid="mail.mt_note",
+                )
+                record.name = invoice_no  # Update the invoice number in Odoo
+
     def _post(self, soft=True):
         """
         After posting sale invoices, automatically send them to Fennoa
@@ -422,7 +452,7 @@ class AccountMove(models.Model):
         res = self._fennoa_api_request_make(
             "POST",
             "/sales_api/add",
-            form_payload=payload,
+            values=payload,
             related_model=self._name,
             related_id=self.id,
         )
@@ -446,6 +476,17 @@ class AccountMove(models.Model):
         res = self._fennoa_api_request_make(
             "POST",
             f"/sales_api/do/send/{fennoa_id}",
+            related_model=self._name,
+            related_id=self.id,
+        )
+
+        return res
+
+    def fennoa_api_get_sales_invoice(self, fennoa_id):
+        """Get sales invoice details from Fennoa by its ID."""
+        res = self._fennoa_api_request_make(
+            "GET",
+            f"/sales_api/{fennoa_id}",
             related_model=self._name,
             related_id=self.id,
         )
