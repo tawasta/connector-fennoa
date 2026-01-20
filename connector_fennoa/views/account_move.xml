@@ -73,6 +73,7 @@
                             />
                         </group>
                         <group>
+                            <!--
                             <button
                                 name="action_fennoa_import_record"
                                 type="object"
@@ -81,6 +82,7 @@
                                 invisible="not fennoa_binding_count"
                                 colspan="2"
                             />
+                            -->
                             <button
                                 name="action_fennoa_get_invoice_number"
                                 type="object"

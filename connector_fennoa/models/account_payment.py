@@ -1,80 +1,14 @@
 import logging
 
-from odoo import _, fields, models
+from odoo import _, models
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
 
 class AccountPayment(models.Model):
-    _inherit = "account.payment"
-
-    fennoa_binding_count = fields.Integer(
-        string="Fennoa Logs",
-        compute="_compute_fennoa_binding_count",
-    )
-    fennoa_binding_ids = fields.One2many(
-        comodel_name="fennoa.binding",
-        inverse_name="res_id",
-        string="Fennoa Bindings",
-        domain=[("res_model", "=", "res.partner")],
-    )
-    fennoa_binding_id = fields.Many2one(
-        comodel_name="fennoa.binding",
-        string="Fennoa Binding",
-        compute="_compute_fennoa_binding_id",
-    )
-    fennoa_id = fields.Integer(
-        string="Fennoa Invoice ID",
-        related="fennoa_binding_id.external_id",
-        compute="_compute_fennoa_binding_id",
-    )
-
-    def _compute_fennoa_binding_count(self):
-        for record in self:
-            record.fennoa_binding_count = len(self.fennoa_binding_ids)
-
-    def _compute_fennoa_binding_id(self):
-        """
-        Helper for getting the correct binding for this record.
-        """
-        FennoaBinding = self.env["fennoa.binding"].sudo()
-        for record in self:
-            vals = {
-                "fennoa_binding_id": False,
-                "fennoa_id": False,
-            }
-
-            binding = FennoaBinding.search(
-                [
-                    ("res_model", "=", self._name),
-                    ("res_id", "=", record.id),
-                    ("company_id", "=", record.company_id.id),
-                ],
-                limit=1,
-            )
-
-            if binding:
-                vals.update(
-                    {
-                        "fennoa_binding_id": binding.id,
-                        "fennoa_id": binding.external_id,
-                    }
-                )
-
-            record.write(vals)
-
-    def action_view_fennoa_bindings(self):
-        """Open Fennoa bindings related to this record."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Fennoa Bindings"),
-            "res_model": "fennoa.binding",
-            "view_mode": "tree,form",
-            "domain": [("res_model", "=", self._name), ("res_id", "=", self.id)],
-            "context": {"default_res_model": self._name, "default_res_id": self.id},
-        }
+    _name = "account.payment"
+    _inherit = ["account.payment", "api.request.mixin", "fennoa.binding.mixin"]
 
     def fennoa_import_record(self, values, company_id):
         """

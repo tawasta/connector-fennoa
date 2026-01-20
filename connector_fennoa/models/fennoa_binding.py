@@ -3,7 +3,7 @@ from odoo import fields, models
 
 class FennoaBinding(models.Model):
     _name = "fennoa.binding"
-    _description = "Fennoa Binding Log"
+    _description = "Fennoa Binding"
     _inherit = "external.binding"
     _order = "id DESC"
 

@@ -118,9 +118,9 @@ class ApiRequestMixin(models.Model):
             external_id = None
 
         if external_id and related_model and related_id:
-            FennoaBinding = self.env["fennoa.binding"].sudo()
+            Binding = self.env["fennoa.binding"].sudo()
             backend = self._get_fennoa_backend()
-            existing = FennoaBinding.search(
+            existing = Binding.search(
                 [
                     ("backend_id", "=", backend.id),
                     ("res_model", "=", related_model),
@@ -136,6 +136,6 @@ class ApiRequestMixin(models.Model):
                     "res_id": related_id,
                     "external_id": external_id,
                 }
-                self.env["fennoa.binding"].create(vals)
+                Binding.create(vals)
 
         return response
