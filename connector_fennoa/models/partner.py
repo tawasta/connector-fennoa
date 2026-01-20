@@ -20,6 +20,16 @@ class ResPartner(models.Model):
         string="Fennoa Bindings",
         domain=[("res_model", "=", "res.partner")],
     )
+    fennoa_binding_id = fields.Many2one(
+        comodel_name="fennoa.binding",
+        string="Fennoa Binding",
+        compute="_compute_fennoa_binding_id",
+    )
+    fennoa_id = fields.Integer(
+        string="Fennoa Invoice ID",
+        related="fennoa_binding_id.external_id",
+        compute="_compute_fennoa_binding_id",
+    )
     fennoa_export = fields.Boolean(
         string="Export to Fennoa",
         help="Disable this to prevent exporting partner to Fennoa",
@@ -29,6 +39,36 @@ class ResPartner(models.Model):
     def _compute_fennoa_binding_count(self):
         for record in self:
             record.fennoa_binding_count = len(self.fennoa_binding_ids)
+
+    def _compute_fennoa_binding_id(self):
+        """
+        Helper for getting the correct binding for this record.
+        """
+        FennoaBinding = self.env["fennoa.binding"].sudo()
+        for record in self:
+            vals = {
+                "fennoa_binding_id": False,
+                "fennoa_id": False,
+            }
+
+            binding = FennoaBinding.search(
+                [
+                    ("res_model", "=", self._name),
+                    ("res_id", "=", record.id),
+                    ("company_id", "=", record.company_id.id),
+                ],
+                limit=1,
+            )
+
+            if binding:
+                vals.update(
+                    {
+                        "fennoa_binding_id": binding.id,
+                        "fennoa_id": binding.external_id,
+                    }
+                )
+
+            record.write(vals)
 
     def get_combined_street(self):
         """
@@ -281,7 +321,7 @@ class ResPartner(models.Model):
         res = self._fennoa_api_request_make(
             "POST",
             "/customer_api/add",
-            form_payload=customer_data,
+            values=customer_data,
             related_model=partner._name if partner else None,
             related_id=partner.id if partner else None,
         )
@@ -294,7 +334,7 @@ class ResPartner(models.Model):
         res = self._fennoa_api_request_make(
             "PUT",
             endpoint,
-            json_payload=payload,
+            values=payload,
         )
 
         return res

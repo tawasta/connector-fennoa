@@ -59,10 +59,7 @@
                                 name="fennoa_sent_date"
                                 invisible="not fennoa_sent_date"
                             />
-                            <field
-                                name="fennoa_invoice_id"
-                                invisible="not fennoa_invoice_id"
-                            />
+                            <field name="fennoa_id" invisible="not fennoa_id" />
                             <field name="fennoa_binding_count" invisible="1" />
                         </group>
                         <group>
@@ -81,6 +78,15 @@
                                 type="object"
                                 class=""
                                 string="Update from Fennoa"
+                                invisible="not fennoa_binding_count"
+                                colspan="2"
+                            />
+                            <button
+                                name="action_fennoa_get_invoice_number"
+                                type="object"
+                                class=""
+                                string="Get invoice number"
+                                help="Fetch and update the invoice number from Fennoa"
                                 invisible="not fennoa_binding_count"
                                 colspan="2"
                             />
