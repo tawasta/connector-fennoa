@@ -1,5 +1,3 @@
-import base64
-import json
 import logging
 from datetime import timedelta
 
@@ -47,16 +45,17 @@ class FennoaBackend(models.Model):
         :param company: Company record
         :return: Fennoa backend record
         """
+
+        if not company:
+            # Fallback to current user's company
+            company = self.env.company
+
         if isinstance(company, int):
             company_id = company
         else:
             company_id = company.id
 
-        backend = self.search(
-            [
-                ("company_id", "=", company_id),
-            ]
-        )
+        backend = self.search([("company_id", "=", company_id)])
 
         if not backend:
             raise UserError(
@@ -81,139 +80,13 @@ class FennoaBackend(models.Model):
         self.ensure_one()
         return (self.base_url or "").rstrip("/")
 
-    def _build_auth(self):
-        """Return Fennoa API authentication tuple (username, password)."""
-        self.ensure_one()
-        raw = self.secret_key_b64 or ""
-        password = raw
-        try:
-            decoded = base64.b64decode(raw).decode("utf-8")
-            if decoded:
-                password = decoded
-        except Exception:
-            password = raw
-        return (self.client_identifier, password)
-
-    def _build_url(self, endpoint):
-        """Build full request URL including base URL and endpoint."""
-        base = self._normalized_base_url()
-        if not endpoint.startswith("/"):
-            endpoint = "/" + endpoint
-        return f"{base}{endpoint}"
-
-    def _get_headers(self):
-        """Return common headers for Fennoa API requests."""
-        return {
-            "Accept": "application/json",
-            "User-Agent": "Futural-Odoo-Fennoa-Connector/1.0",
-        }
-
-    def _send_request(
-        self,
-        method,
-        endpoint,
-        *,
-        params=None,
-        values=None,
-        form_payload=None,
-        json_payload=None,
-        related_model=None,
-        related_id=None,
-    ):
-        """
-        Perform HTTP request to Fennoa API and log request/response.
-        """
-        self.ensure_one()
-
-        url = self._build_url(endpoint)
-        auth = self._build_auth()
-        headers = self._get_headers()
-
-        if json_payload is not None:
-            headers["Content-Type"] = "application/json"
-            payload = json_payload
-        elif form_payload is not None:
-            payload = form_payload
-        else:
-            payload = None
-
-        kwargs = {
-            "auth": auth,
-            "headers": headers,
-            "params": params or {},
-            "values": values or {},
-            "endpoint": url,
-            "method": method,
-            "payload": payload,
-        }
-
-        _logger.debug("Sending request to Fennoa: %s", kwargs)
-
-        try:
-            request = self._api_request_make(**kwargs)
-        except ValidationError as e:
-            _logger.error("Fennoa API request failed: %s", str(e))
-            error_msg = self._format_api_error_message(e)
-            raise ValidationError(error_msg) from e
-
-        response = request.json().get("data") or request.json() or {}
-
-        # TODO: different method for response handling / binding creation
-        if not isinstance(response, dict):
-            external_id = None
-        elif response.get("id"):
-            external_id = response.get("id")
-        elif len(response) == 1:
-            external_id = list(response.values())[0].get("id")
-        else:
-            external_id = None
-
-        if external_id and related_model and related_id:
-            FennoaBinding = self.env["fennoa.binding"].sudo()
-            existing = FennoaBinding.search(
-                [
-                    ("backend_id", "=", self.id),
-                    ("res_model", "=", related_model),
-                    ("res_id", "=", related_id),
-                    ("external_id", "=", external_id),
-                ],
-                limit=1,
-            )
-            if not existing:
-                vals = {
-                    "backend_id": self.id,
-                    "res_model": related_model,
-                    "res_id": related_id,
-                    "external_id": external_id,
-                }
-                self.env["fennoa.binding"].create(vals)
-
-        return response
-
-    def _format_api_error_message(self, error):
-        """
-        Format API error message for user display.
-        """
-        error_dict = json.loads(str(error))
-        error_msg = ""
-        if isinstance(error_dict, dict):
-            messages = []
-            for key, value in error_dict.get("errors", {}).items():
-                errors = ", ".join(value) if isinstance(value, list) else value
-                messages.append(f"{key}: {errors}")
-            error_msg = "\n".join(messages)
-        else:
-            error_msg = str(error)
-
-        return error_msg
-
     # endregion constraints and helpers
 
     # region actions
     def action_test_connection(self):
         """Test API access by calling GET /customer_api."""
         for backend in self:
-            backend._send_request(
+            backend._fennoa_api_request_make(
                 "GET",
                 "/customer_api/",
             )
@@ -229,10 +102,6 @@ class FennoaBackend(models.Model):
             },
         }
 
-    # -------------------------------------------------------------------------
-    # API: GET Customers
-    # -------------------------------------------------------------------------
-
     def action_import_customers(self):
         """
         Fetch all customers from Fennoa and create them in Odoo (via background job).
@@ -247,7 +116,7 @@ class FennoaBackend(models.Model):
             description=job_desc,
             priority=30,
             max_retries=3,
-        )._import_fennoa_customers()
+        )._import_customers()
 
         return {
             "type": "ir.actions.client",
@@ -273,6 +142,8 @@ class FennoaBackend(models.Model):
 
         Designed to be called by a cron job and can also be run manually.
         """
+        # TODO: break this down to smaller methods
+        # TODO: move to account.payment -model. See res.partner for example.
         self.ensure_one()
         Move = self.env["account.move"]
         Payment = self.env["account.payment"]
@@ -376,176 +247,49 @@ class FennoaBackend(models.Model):
     # endregion actions
 
     # region API calls
-    def _import_fennoa_customers(self):
+
+    # -------------------------------------------------------------------------
+    # API: Customers
+    # -------------------------------------------------------------------------
+    def _import_customers(self):
         customer_list = self.api_get_customers()
 
         if not customer_list:
             return "No customers to import"
+
+        Partner = self.env["res.partner"]
+        jobs = 0
 
         for row in customer_list:
             customer = row.get("Customer") or {}
             if not customer:
                 continue
 
+            fennoa_id = customer.get("id")
+            if not fennoa_id:
+                continue
+
             job_desc = _("Fennoa: import customer '[%(id)s] %(name)s'") % {
-                "id": customer.get("id") or "",
+                "id": fennoa_id,
                 "name": customer.get("name") or "",
             }
 
-            self.with_delay(description=job_desc)._import_fennoa_customer(customer)
-
-        return "Import jobs for %s customers have been queued." % len(customer_list)
-
-    def _import_fennoa_customer(self, customer):
-        """Create missing Fennoa customers into Odoo."""
-        Partner = self.env["res.partner"]
-        Binding = self.env["fennoa.binding"]
-
-        fennoa_id = customer.get("id")
-        if not fennoa_id:
-            return "Invalid customer data from Fennoa: missing ID"
-
-        # Try to find existing binding
-        existing = Binding.search(
-            [
-                ("backend_id", "=", self.id),
-                ("external_id", "=", str(fennoa_id)),
-                ("res_model", "=", Partner._name),
-            ],
-            limit=1,
-        )
-        if not existing:
-            # Try to find existing partner by customer number
-            existing = Partner.search(
-                [
-                    ("ref", "=", customer.get("customer_no") or ""),
-                ],
-                limit=1,
-            )
-        if existing:
-            return "Customer already exists in Odoo, skipping import"
-
-        country_code = customer.get("country_id") or ""
-        country = False
-        if country_code:
-            country = self.env["res.country"].search(
-                [("code", "=", country_code)], limit=1
+            jobs += 1
+            Partner.with_delay(description=job_desc).fennoa_import_record(
+                int(fennoa_id)
             )
 
-        # TODO: use importer instead of raw values
-        vals = {
-            "name": customer.get("name") or "",
-            "street": customer.get("address") or "",
-            "zip": customer.get("postalcode") or "",
-            "city": customer.get("city") or "",
-            "country_id": country.id if country else False,
-            "email": customer.get("email") or "",
-            "phone": customer.get("phone") or "",
-            "vat": customer.get("business_id") or "",
-            "comment": customer.get("description") or "",
-            "website": customer.get("website") or "",
-            "ref": customer.get("customer_no") or "",
-            "company_id": self.company_id.id,
-        }
-        new_partner = Partner.create(vals)
-
-        binding_vals = {
-            "backend_id": self.id,
-            "res_model": Partner._name,
-            "external_id": fennoa_id,
-            "res_id": new_partner.id,
-        }
-
-        Binding.create(binding_vals)
-        return (
-            f"Imported Fennoa customer ID '{fennoa_id}' "
-            f"into Odoo with ID '{new_partner.id}'"
-        )
-
-    # -------------------------------------------------------------------------
-    # API: Customers
-    # -------------------------------------------------------------------------
-
-    def api_create_customer(self, customer_data, partner=None):
-        """Create a new customer in Fennoa using FORM DATA."""
-        self.ensure_one()
-
-        res = self._send_request(
-            "POST",
-            "/customer_api/add",
-            form_payload=customer_data,
-            related_model=partner._name if partner else None,
-            related_id=partner.id if partner else None,
-        )
-
-        return res
-
-    def api_update_customer(self, external_id, payload):
-        """Update existing customer in Fennoa using JSON."""
-        self.ensure_one()
-
-        endpoint = f"/customer_api/{external_id}"
-        res = self._send_request(
-            "PUT",
-            endpoint,
-            json_payload=payload,
-        )
-
-        return res
-
-    def api_get_customer_by_id(self, customer_id):
-        """Fetch customer details by Fennoa internal ID."""
-        self.ensure_one()
-
-        endpoint = f"/customer_api/{customer_id}"
-        try:
-            res = self._send_request("GET", endpoint).get("Customer") or {}
-        except ValidationError as e:
-            _logger.warning(f"Customer with ID {customer_id} not found: %s", str(e))
-            res = None
-
-        return res
-
-    def api_get_customer_by_number(self, customer_no):
-        """Fetch customer by external customer number."""
-        self.ensure_one()
-
-        endpoint = f"/customer_api/get/customer_no/{customer_no}"
-        try:
-            res = self._send_request("GET", endpoint).get("Customer") or {}
-        except ValidationError as e:
-            _logger.warning(f"Customer with number {customer_no} not found: %s", str(e))
-            res = None
-
-        return res
+        return "Import jobs for %s customers have been queued." % jobs
 
     def api_get_customers(self, params=None):
         """Fetch list of customers from Fennoa."""
         self.ensure_one()
 
         endpoint = "/customer_api/"
-        res = self._send_request(
+        res = self._fennoa_api_request_make(
             "GET",
             endpoint,
             params=params,
-        )
-
-        return res
-
-    # -------------------------------------------------------------------------
-    # API: Sales Invoices
-    # -------------------------------------------------------------------------
-
-    def api_create_sales_invoice(self, invoice_data, move=None):
-        """Send a new sales invoice to Fennoa (FORM DATA)."""
-        self.ensure_one()
-
-        res = self._send_request(
-            "POST",
-            "/sales_api/add",
-            form_payload=invoice_data,
-            related_model=move._name if move else None,
-            related_id=move.id if move else None,
         )
 
         return res
@@ -582,7 +326,7 @@ class FennoaBackend(models.Model):
             created_str = self._format_fennoa_date(created_after, "created_after")
             endpoint = f"{endpoint}/created_after:{created_str}"
 
-        res = self._send_request("GET", endpoint)
+        res = self._fennoa_api_request_make("GET", endpoint)
 
         return res
 
