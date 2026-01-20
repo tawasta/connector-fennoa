@@ -15,6 +15,10 @@ class FennoaBinding(models.Model):
         ),
     ]
 
+    name = fields.Char(
+        compute="_compute_name",
+    )
+
     backend_id = fields.Many2one(
         comodel_name="fennoa.backend",
         string="Fennoa Backend",
@@ -35,3 +39,20 @@ class FennoaBinding(models.Model):
         string="Related Record ID",
         readonly=True,
     )
+
+    def _compute_name(self):
+        for record in self:
+            record.name = f"{record.res_model}.{record.res_id}: {record.external_id}"
+
+    def action_open_record(self):
+        """
+        Open the related Odoo record.
+        :return: Action dictionary
+        """
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": self.res_model,
+            "res_id": self.res_id,
+            "view_mode": "form",
+        }

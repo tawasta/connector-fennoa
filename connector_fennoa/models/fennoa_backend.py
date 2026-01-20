@@ -35,6 +35,15 @@ class FennoaBackend(models.Model):
         default=lambda self: self.env.company,
     )
     binding_ids = fields.One2many("fennoa.binding", "backend_id", readonly=True)
+
+    payments_from_date = fields.Date(
+        string="Import Payments From",
+        readonly=True,
+    )
+    payments_to_date = fields.Date(
+        string="Import Payments To",
+        readonly=True,
+    )
     # endregion fields
 
     # region constraints and helpers
@@ -112,11 +121,7 @@ class FennoaBackend(models.Model):
             "company": self.company_id.display_name,
         }
 
-        self.with_delay(
-            description=job_desc,
-            priority=30,
-            max_retries=3,
-        )._import_customers()
+        self.with_delay(description=job_desc)._import_customers()
 
         return {
             "type": "ir.actions.client",
@@ -136,102 +141,17 @@ class FennoaBackend(models.Model):
         for backend in self.env["fennoa.backend"].sudo().search([]):
             backend.action_import_payments()
 
-    def action_import_payments(self, from_date=None, to_date=None, created_after=None):
+    def action_import_payments(self):
         """
-        Import Fennoa sales payments and apply them to invoices in Odoo.
-
-        Designed to be called by a cron job and can also be run manually.
+        Fetch all payments from Fennoa and create them in Odoo (via background job).
         """
-        # TODO: break this down to smaller methods
-        # TODO: move to account.payment -model. See res.partner for example.
         self.ensure_one()
-        Move = self.env["account.move"]
-        Payment = self.env["account.payment"]
 
-        # Default date range: last 7 days if not provided
-        if not from_date:
-            from_date = (fields.Date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
-        if not to_date:
-            to_date = fields.Date.today().strftime("%Y-%m-%d")
+        job_desc = _("Fennoa: import payments for '%(company)s'") % {
+            "company": self.company_id.display_name,
+        }
 
-        result = self.api_get_sales_payments(
-            from_date=from_date, to_date=to_date, created_after=created_after
-        )
-        _logger.info("RESULT: %s", result)
-
-        payments = result.get("data") or []
-
-        for payment_entry in payments:
-            payment_data = payment_entry.get("SalesInvoicePayment") or {}
-            invoice_data = payment_entry.get("SalesInvoice") or {}
-
-            if not payment_data or not invoice_data:
-                continue
-
-            fennoa_payment_id = payment_data.get("id")
-            fennoa_invoice_id = invoice_data.get("id")
-
-            if not fennoa_payment_id or not fennoa_invoice_id:
-                continue
-
-            PaymentExists = Payment.search(
-                [
-                    ("fennoa_payment_id", "=", int(fennoa_payment_id)),
-                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
-                    ("company_id", "=", self.company_id.id),
-                ],
-                limit=1,
-            )
-            if PaymentExists:
-                _logger.info(
-                    "Payment for Fennoa payment ID %s already exists in Odoo, skipping",
-                    fennoa_payment_id,
-                )
-                continue
-
-            move = Move.search(
-                [
-                    ("fennoa_invoice_id", "=", int(fennoa_invoice_id)),
-                    ("company_id", "=", self.company_id.id),
-                    ("move_type", "in", ("out_invoice", "out_refund")),
-                ],
-                limit=1,
-            )
-
-            if move:
-                ctx = {
-                    "active_model": "account.move",
-                    "active_ids": move.ids,
-                }
-                wizard = (
-                    self.env["account.payment.register"]
-                    .with_context(**ctx)
-                    .create(
-                        {
-                            "payment_date": payment_data.get("date")
-                            or fields.Date.today().strftime("%Y-%m-%d"),
-                            "amount": float(payment_data.get("sum") or 0.0),
-                            "communication": invoice_data.get("banking_reference")
-                            or "",
-                        }
-                    )
-                )
-
-                odoo_payments = wizard._create_payments()
-
-                # Tag payments with Fennoa ids
-                for pay in odoo_payments:
-                    pay.write(
-                        {
-                            "fennoa_payment_id": int(payment_data.get("id")),
-                            "fennoa_invoice_id": int(invoice_data.get("id")),
-                        }
-                    )
-                _logger.info(
-                    "Created Odoo payments for Fennoa payment ID %s: %s",
-                    fennoa_payment_id,
-                    odoo_payments,
-                )
+        self.with_delay(description=job_desc)._import_payments()
 
         return {
             "type": "ir.actions.client",
@@ -308,6 +228,40 @@ class FennoaBackend(models.Model):
             _("Invalid value for %(field)s in Fennoa payment query: %(value)s")
             % {"field": field_name, "value": value}
         )
+
+    def _import_payments(self):
+        from_date = self.payments_from_date
+        to_date = self.payments_to_date
+
+        if not from_date:
+            from_date = fields.Date.today() - timedelta(days=30)
+        if not to_date:
+            to_date = fields.Date.today()
+
+        payment_list = self.api_get_sales_payments(from_date, to_date)
+
+        if not payment_list:
+            return "No payments to import"
+
+        Payment = self.env["account.payment"]
+        jobs = 0
+
+        for payment in payment_list:
+            payment_data = payment.get("SalesInvoicePayment") or {}
+            job_desc = _("Fennoa: import payment [%(id)s] %(name)s") % {
+                "id": payment_data.get("id"),
+                "name": payment_data.get("description") or "",
+            }
+
+            jobs += 1
+            Payment.with_delay(description=job_desc).fennoa_import_record(
+                payment,
+                self.company_id,
+            )
+
+            self.payments_from_date = to_date
+
+        return "Import jobs for %s payments have been queued." % jobs
 
     def api_get_sales_payments(self, from_date, to_date, created_after=None):
         """
