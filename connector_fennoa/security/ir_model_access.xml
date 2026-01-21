@@ -3,7 +3,7 @@
     <record id="access_fennoa_backend" model="ir.model.access">
         <field name="name">fennoa.backend</field>
         <field name="model_id" ref="model_fennoa_backend" />
-        <field name="group_id" />
+        <field name="group_id" ref="connector.group_connector_manager" />
         <field name="perm_read">1</field>
         <field name="perm_write">1</field>
         <field name="perm_create">1</field>
@@ -12,10 +12,19 @@
     <record id="access_fennoa_binding" model="ir.model.access">
         <field name="name">fennoa.binding</field>
         <field name="model_id" ref="model_fennoa_binding" />
-        <field name="group_id" />
+        <field name="group_id" ref="account.group_account_invoice" />
         <field name="perm_read">1</field>
-        <field name="perm_write">1</field>
-        <field name="perm_create">1</field>
-        <field name="perm_unlink">1</field>
+        <field name="perm_write">0</field>
+        <field name="perm_create">0</field>
+        <field name="perm_unlink">0</field>
+    </record>
+    <record id="access_fennoa_binding_mixin" model="ir.model.access">
+        <field name="name">fennoa.binding.mixin</field>
+        <field name="model_id" ref="model_fennoa_binding_mixin" />
+        <field name="group_id" ref="account.group_account_invoice" />
+        <field name="perm_read">1</field>
+        <field name="perm_write">0</field>
+        <field name="perm_create">0</field>
+        <field name="perm_unlink">0</field>
     </record>
 </odoo>

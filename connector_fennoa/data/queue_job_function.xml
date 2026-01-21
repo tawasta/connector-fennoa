@@ -1,17 +1,76 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<odoo noupdate="0">
+<odoo>
 
-    <!-- Fennoa: import customers (backend._import_fennoa_customers) -->
-    <record id="job_function_fennoa_import_customers" model="queue.job.function">
+    <!-- Fennoa: backend -->
+    <record id="job_function_fennoa_backend_export_record" model="queue.job.function">
         <field name="model_id" ref="connector_fennoa.model_fennoa_backend" />
-        <field name="method">_import_fennoa_customers</field>
+        <field name="method">_import_payments</field>
         <field name="channel_id" ref="channel_fennoa" />
     </record>
 
-    <!-- Fennoa: export invoice (account.move.fennoa_export_record) -->
-    <record id="job_function_fennoa_invoice_export_record" model="queue.job.function">
-        <field name="model_id" ref="account.model_account_move" />
-        <field name="method">fennoa_export_record</field>
+    <!-- Fennoa: invoices -->
+    <record
+        id="job_function_fennoa_account_move_export_record"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_account_move" />
+        <field name="method">_fennoa_export_record</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <record
+        id="job_function_fennoa_account_move_approve_invoice"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_account_move" />
+        <field name="method">action_fennoa_approve_invoice</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <record
+        id="job_function_fennoa_account_move_get_invoice_number"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_account_move" />
+        <field name="method">action_fennoa_get_invoice_details</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <!-- Fennoa: Payments -->
+    <record
+        id="job_function_fennoa_account_payment_export_record"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_account_payment" />
+        <field name="method">_fennoa_export_record</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <record
+        id="job_function_fennoa_account_payment_import_record"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_account_payment" />
+        <field name="method">_fennoa_import_record</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <!-- Fennoa: Partners -->
+    <record
+        id="job_function_fennoa_res_partner_export_record"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_res_partner" />
+        <field name="method">_fennoa_export_record</field>
+        <field name="channel_id" ref="channel_fennoa" />
+    </record>
+
+    <record
+        id="job_function_fennoa_res_partner_import_record"
+        model="queue.job.function"
+    >
+        <field name="model_id" ref="connector_fennoa.model_res_partner" />
+        <field name="method">_fennoa_import_record</field>
         <field name="channel_id" ref="channel_fennoa" />
     </record>
 

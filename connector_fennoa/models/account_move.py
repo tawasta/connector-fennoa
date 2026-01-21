@@ -4,93 +4,20 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import html2plaintext
 
-from odoo.addons.queue_job.delay import group
+from odoo.addons.queue_job.delay import chain
 
 _logger = logging.getLogger(__name__)
 
 
 class AccountMove(models.Model):
     _name = "account.move"
-    _inherit = ["account.move", "api.request.mixin"]
+    _inherit = ["account.move", "api.request.mixin", "fennoa.binding.mixin"]
 
-    fennoa_binding_count = fields.Integer(
-        string="Fennoa bindings",
-        compute="_compute_fennoa_binding_count",
-    )
-    fennoa_binding_ids = fields.One2many(
-        comodel_name="fennoa.binding",
-        inverse_name="res_id",
-        string="Fennoa Bindings",
-        domain=[("res_model", "=", "account.move")],
-    )
-    fennoa_binding_id = fields.Many2one(
-        comodel_name="fennoa.binding",
-        string="Fennoa Binding",
-        compute="_compute_fennoa_binding_id",
-    )
-    fennoa_id = fields.Integer(
-        string="Fennoa Invoice ID",
-        related="fennoa_binding_id.external_id",
-        compute="_compute_fennoa_binding_id",
-    )
+    # region Fields
 
-    fennoa_export = fields.Boolean(
-        string="Export to Fennoa",
-        help="Disable this to prevent exporting partner to Fennoa",
-        default=True,
-    )
+    # endregion
 
-    fennoa_delayed_send = fields.Boolean(
-        string="Fennoa delayed send",
-        default=False,
-        copy=False,
-        help=(
-            "When enabled, invoices are sent to Fennoa as background jobs "
-            "using the Odoo queue (with_delay)."
-        ),
-    )
-
-    fennoa_sent_date = fields.Datetime(
-        string="Sent to Fennoa",
-        readonly=True,
-        copy=False,
-        help="Timestamp when this invoice was successfully sent to Fennoa.",
-    )
-
-    def _compute_fennoa_binding_count(self):
-        for record in self:
-            record.fennoa_binding_count = len(self.fennoa_binding_ids)
-
-    def _compute_fennoa_binding_id(self):
-        """
-        Helper for getting the correct binding for this record.
-        """
-        FennoaBinding = self.env["fennoa.binding"].sudo()
-        for record in self:
-            vals = {
-                "fennoa_binding_id": False,
-                "fennoa_id": False,
-            }
-
-            binding = FennoaBinding.search(
-                [
-                    ("res_model", "=", self._name),
-                    ("res_id", "=", record.id),
-                    ("company_id", "=", record.company_id.id),
-                ],
-                limit=1,
-            )
-
-            if binding:
-                vals.update(
-                    {
-                        "fennoa_binding_id": binding.id,
-                        "fennoa_id": binding.external_id,
-                    }
-                )
-
-            record.write(vals)
-
+    # region Compute and helper methods
     @api.depends("date", "auto_post")
     def _compute_hide_post_button(self):
         # Hide "Confirm"-button if fennoa_export is enabled
@@ -174,29 +101,9 @@ class AccountMove(models.Model):
 
         return delivery_method
 
-    def action_view_fennoa_bindings(self):
-        """Open Fennoa bindings related to this record."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Fennoa Bindings"),
-            "res_model": "fennoa.binding",
-            "view_mode": "tree,form",
-            "domain": [("res_model", "=", self._name), ("res_id", "=", self.id)],
-            "context": {"default_res_model": self._name, "default_res_id": self.id},
-        }
+    # endregion
 
-    def action_fennoa_export_record(self):
-        """Export record to Fennoa"""
-        for record in self:
-            record.fennoa_export_record()
-        return True
-
-    def action_fennoa_import_record(self):
-        """Update record from Fennoa."""
-        _logger.error("Importing record from Fennoa not implemented!")
-        return True
-
+    # region Mappers
     def fennoa_export_mapper(self) -> dict:
         """
         Map Odoo invoice values to Fennoa sales invoice payload.
@@ -314,12 +221,119 @@ class AccountMove(models.Model):
 
         return payload
 
-    def fennoa_export_record(self):
+    # endregion
+
+    # region Actions
+    # TODO: This overwrites the mixin method, and could be handled better
+    def action_fennoa_export_record(self):
+        """
+        Export (send) invoice(s) to Fennoa.
+
+        - If there is a single invoice and fennoa_delayed_send = False:
+          send synchronously in the current transaction.
+        - Otherwise:
+          schedule one background job per invoice using with_delay (queue_job).
+        """
+        sale_moves = self.filtered(lambda m: m.is_sale_document() and m.fennoa_export)
+        if not sale_moves:
+            return True
+
+        if len(sale_moves) == 1 and not sale_moves.fennoa_delayed_send:
+            # Direct send for a single invoice (no background job)
+            sale_moves._fennoa_export_record()
+        else:
+            # Schedule one background job per invoice (queue_job / with_delay)
+            for move in sale_moves:
+                job_desc = _("Fennoa: send invoice %(name)s [Odoo ID: %(id)s]") % {
+                    "name": move.name or move.display_name,
+                    "id": move.id,
+                }
+
+                move.with_delay(description=job_desc)._fennoa_export_record()
+
+        return True
+
+    def action_fennoa_approve_invoice(self):
+        """Approve invoice(s) in Fennoa."""
+        for record in self:
+            record.fennoa_api_approve_sales_invoice()
+            record.message_post(
+                body=_("Invoice approved in Fennoa."),
+                subtype_xmlid="mail.mt_note",
+            )
+        return _("Invoice(s) approved in Fennoa.")
+
+    def action_fennoa_get_invoice_details(self):
+        """
+        Fetch and update the invoice details from Fennoa
+        """
+        for record in self:
+            res = self.fennoa_api_get_sales_invoice(record.fennoa_id)
+            sale_invoice = res.get("SalesInvoice", {})
+            # TODO: create import mapper to handle more fields
+            invoice_no = sale_invoice.get("invoice_no")
+            payment_reference = sale_invoice.get("banking_reference")
+
+            if invoice_no and invoice_no != record.name:
+                record.name = invoice_no  # Update the invoice number in Odoo
+                record.message_post(
+                    body=_("Fetched invoice number '%s' from Fennoa." % invoice_no),
+                    subtype_xmlid="mail.mt_note",
+                )
+            if payment_reference and payment_reference != record.payment_reference:
+                record.payment_reference = (
+                    payment_reference
+                )  # Update the payment reference in Odoo
+                record.message_post(
+                    body=_(
+                        "Fetched payment reference '%s' from Fennoa."
+                        % payment_reference
+                    ),
+                    subtype_xmlid="mail.mt_note",
+                )
+
+    # endregion
+
+    # region Business logic
+    def _post(self, soft=True):
+        """
+        After posting sale invoices, automatically send them to Fennoa
+        according to fennoa_export / fennoa_delayed_send flags.
+        """
+        res = super()._post(soft)
+
+        sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_export)
+        sale_invoices.action_fennoa_export_record()
+
+        return res
+
+    def write(self, vals):
+        res = super().write(vals)
+
+        if vals.get("payment_id"):
+            for record in self.filtered(lambda r: r.is_entry()):
+                # Send the payment to Fennoa
+                job_desc = _(
+                    "Fennoa: send payment for invoice %s to Fennoa",
+                    record.name,
+                )
+                record.payment_id.with_delay(
+                    description=job_desc
+                )._fennoa_export_record()
+
+        return res
+
+    def _fennoa_export_record(self):
         """Send a single invoice to Fennoa (called directly or via with_delay)."""
         self.ensure_one()
 
-        if not self.fennoa_export:
-            raise UserError(_("Fennoa export not enabled for this invoice."))
+        if self.fennoa_binding_id:
+            raise UserError(
+                _(
+                    "Invoice '%s' has already been exported to Fennoa.",
+                    self.display_name,
+                )
+            )
 
         if self.move_type not in ("out_invoice", "out_refund"):
             raise UserError(
@@ -332,17 +346,29 @@ class AccountMove(models.Model):
             )
 
         # Ensure customer exists in Fennoa and is up to date
-        self.partner_id.fennoa_export_record()
+        self.partner_id.action_fennoa_export_record()
 
         payload = self.fennoa_export_mapper()
 
         self.fennoa_api_create_sales_invoice(payload)
 
-        self.write(
-            {
-                "fennoa_sent_date": fields.Datetime.now(),
-            }
-        )
+        vals = {
+            "fennoa_sent_date": fields.Datetime.now(),
+        }
+        # Set temporary prefix for invoice to avoid confusion and conflicts,
+        # if Odoo is not in sync with Fennoa sequence
+        # Fennoa will provide the final invoice number after approval
+        if self.name[0:3] != "INV":
+            new_name = f"INV/{self.name}"
+            i = 1
+            while self.search([("name", "=", new_name)]):
+                # If there is an overlapping name, add a sequence number
+                new_name = new_name + f"_{i}"
+                i += 1
+
+            vals["name"] = new_name
+
+        self.update(vals)
 
         self.message_post(
             body=_("Invoice was sent to Fennoa"),
@@ -356,97 +382,19 @@ class AccountMove(models.Model):
             self.delayable(description=job_desc).action_fennoa_approve_invoice()
         )
 
-        job_desc = f"Fennoa: fetch invoice number for invoice ID {self.id}"
+        job_desc = f"Fennoa: fetch invoice details for invoice ID {self.id}"
         delayables.append(
-            self.delayable(description=job_desc).action_fennoa_get_invoice_number()
+            self.delayable(description=job_desc).action_fennoa_get_invoice_details()
         )
 
         # TODO: auto-send (add to connector config)
         # job_send_to_customer = self.delayable().action_fennoa_send_invoice()
 
-        group(*delayables).delay()
+        chain(*delayables).delay()
 
-    def action_fennoa_export_invoice(self):
-        """
-        Export (send) invoice(s) to Fennoa.
+    # endregion
 
-        - If there is a single invoice and fennoa_delayed_send = False:
-          send synchronously in the current transaction.
-        - Otherwise:
-          schedule one background job per invoice using with_delay (queue_job).
-        """
-        sale_moves = self.filtered(
-            lambda m: m.move_type in ("out_invoice", "out_refund") and m.fennoa_export
-        )
-        if not sale_moves:
-            return True
-
-        for move in sale_moves:
-            if not move.partner_id:
-                raise UserError(
-                    _("Invoice %s has no customer to send to Fennoa.")
-                    % move.display_name
-                )
-
-        if len(sale_moves) == 1 and not sale_moves.fennoa_delayed_send:
-            # Direct send for a single invoice (no background job)
-            sale_moves.fennoa_export_record()
-        else:
-            # Schedule one background job per invoice (queue_job / with_delay)
-            for move in sale_moves:
-                job_desc = _("Fennoa: send invoice %(name)s [Odoo ID: %(id)s]") % {
-                    "name": move.name or move.display_name,
-                    "id": move.id,
-                }
-
-                move.with_delay(
-                    description=job_desc,
-                    priority=10,
-                    max_retries=5,
-                ).fennoa_export_record()
-                move.message_post(body=job_desc, subtype_xmlid="mail.mt_note")
-
-        return True
-
-    def action_fennoa_approve_invoice(self):
-        """Approve invoice(s) in Fennoa."""
-        for record in self:
-            record.fennoa_api_approve_sales_invoice()
-            record.message_post(
-                body=_("Invoice approved in Fennoa."),
-                subtype_xmlid="mail.mt_note",
-            )
-        return True
-
-    def action_fennoa_get_invoice_number(self):
-        """
-        Fetch and update the invoice number from Fennoa
-        """
-        for record in self:
-            res = self.fennoa_api_get_sales_invoice(record.fennoa_id)
-            sale_invoice = res.get("SalesInvoice", {})
-            invoice_no = sale_invoice.get("invoice_no")
-
-            if invoice_no and invoice_no != record.name:
-                record.message_post(
-                    body=_("Fetched invoice number '%s' from Fennoa." % invoice_no),
-                    subtype_xmlid="mail.mt_note",
-                )
-                record.name = invoice_no  # Update the invoice number in Odoo
-
-    def _post(self, soft=True):
-        """
-        After posting sale invoices, automatically send them to Fennoa
-        according to fennoa_export / fennoa_delayed_send flags.
-        """
-        res = super()._post(soft)
-
-        sale_invoices = res.filtered(lambda m: m.is_sale_document() and m.fennoa_export)
-        if sale_invoices:
-            sale_invoices.action_fennoa_export_invoice()
-
-        return res
-
+    # region Fennoa API methods
     def fennoa_api_create_sales_invoice(self, payload):
         """Send a new sales invoice to Fennoa (FORM DATA)."""
         res = self._fennoa_api_request_make(
@@ -492,3 +440,5 @@ class AccountMove(models.Model):
         )
 
         return res
+
+    # endregion
