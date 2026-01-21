@@ -8,67 +8,7 @@ _logger = logging.getLogger(__name__)
 
 class ResPartner(models.Model):
     _name = "res.partner"
-    _inherit = ["res.partner", "api.request.mixin"]
-
-    fennoa_binding_count = fields.Integer(
-        string="Fennoa Logs",
-        compute="_compute_fennoa_binding_count",
-    )
-    fennoa_binding_ids = fields.One2many(
-        comodel_name="fennoa.binding",
-        inverse_name="res_id",
-        string="Fennoa Bindings",
-        domain=[("res_model", "=", "res.partner")],
-    )
-    fennoa_binding_id = fields.Many2one(
-        comodel_name="fennoa.binding",
-        string="Fennoa Binding",
-        compute="_compute_fennoa_binding_id",
-    )
-    fennoa_id = fields.Integer(
-        string="Fennoa Invoice ID",
-        related="fennoa_binding_id.external_id",
-        compute="_compute_fennoa_binding_id",
-    )
-    fennoa_export = fields.Boolean(
-        string="Export to Fennoa",
-        help="Disable this to prevent exporting partner to Fennoa",
-        default=True,
-    )
-
-    def _compute_fennoa_binding_count(self):
-        for record in self:
-            record.fennoa_binding_count = len(self.fennoa_binding_ids)
-
-    def _compute_fennoa_binding_id(self):
-        """
-        Helper for getting the correct binding for this record.
-        """
-        FennoaBinding = self.env["fennoa.binding"].sudo()
-        for record in self:
-            vals = {
-                "fennoa_binding_id": False,
-                "fennoa_id": False,
-            }
-
-            binding = FennoaBinding.search(
-                [
-                    ("res_model", "=", self._name),
-                    ("res_id", "=", record.id),
-                    ("company_id", "=", record.company_id.id),
-                ],
-                limit=1,
-            )
-
-            if binding:
-                vals.update(
-                    {
-                        "fennoa_binding_id": binding.id,
-                        "fennoa_id": binding.external_id,
-                    }
-                )
-
-            record.write(vals)
+    _inherit = ["res.partner", "api.request.mixin", "fennoa.binding.mixin"]
 
     def get_combined_street(self):
         """
@@ -86,30 +26,6 @@ class ResPartner(models.Model):
             street = self.street or ""
 
         return street
-
-    def action_view_fennoa_bindings(self):
-        """Open Fennoa bindings related to this record."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Fennoa Bindings"),
-            "res_model": "fennoa.binding",
-            "view_mode": "tree,form",
-            "domain": [("res_model", "=", self._name), ("res_id", "=", self.id)],
-            "context": {"default_res_model": self._name, "default_res_id": self.id},
-        }
-
-    def action_fennoa_export_record(self):
-        """Export record to Fennoa"""
-        for record in self:
-            record.fennoa_export_record()
-        return True
-
-    def action_fennoa_import_record(self):
-        """Update record from Fennoa."""
-        for record in self:
-            record.fennoa_import_record()
-        return True
 
     # TODO: use exporter instead of raw payload
     @api.model
@@ -133,14 +49,12 @@ class ResPartner(models.Model):
         return payload
 
     @api.model
-    def fennoa_export_record(self):
+    def _fennoa_export_record(self):
         """
-        Export partner as a customer to Fennoa if not already exported.
+        Export or update Partner to Fennoa as a Customer.
+        :return: Response from Fennoa API
         """
         self.ensure_one()
-
-        if not self.fennoa_export:
-            return
 
         backend = (
             self.env["fennoa.backend"]
@@ -151,10 +65,10 @@ class ResPartner(models.Model):
         # TODO: use exporter
         payload = self._fennoa_build_customer_payload()
 
-        binding = self.fennoa_binding_ids.filtered(lambda b: b.backend_id == backend)
+        binding = self.fennoa_binding_id
         if not binding and self.ref:
             # Try to find existing partner from Fennoa and create a binding
-            fennoa_customer = backend.api_get_customer_by_number(self.ref)
+            fennoa_customer = self.fennoa_api_get_customer_by_number(self.ref)
             if fennoa_customer:
                 binding = (
                     self.env["fennoa.binding"]
@@ -170,11 +84,12 @@ class ResPartner(models.Model):
                 )
         if binding:
             # Already exported
-            result = self.api_update_customer(self.ref, payload)
+            result = self.fennoa_api_update_customer(self.ref, payload)
             self.message_post(body=_("Updated partner data to Fennoa"))
         else:
             # Create new partner
-            result = self.api_create_customer(payload, partner=self)
+            result = self.fennoa_api_create_customer(payload, partner=self)
+            self.fennoa_sent_date = fields.Datetime.now()
             self.message_post(body=_("Exported partner to Fennoa"))
         return result
 
@@ -205,18 +120,18 @@ class ResPartner(models.Model):
 
         return vals
 
-    def fennoa_import_record(self, fennoa_id=False):
+    def _fennoa_import_record(self, fennoa_id=False):
         """
         Import customer data from Fennoa into Odoo as a partner.
-        :param customer: dict with customer data from Fennoa API
+        :param fennoa_id: Fennoa customer ID to import
         :return: Result message
         """
-        Binding = self.env["fennoa.binding"]
+        Binding = self.env["fennoa.binding"].sudo()
 
         if fennoa_id:
-            customer_data = self.api_get_customer_by_id(fennoa_id)
+            customer_data = self.fennoa_api_get_customer_by_id(fennoa_id)
         elif self.ref:
-            customer_data = self.api_get_customer_by_number(self.ref)
+            customer_data = self.fennoa_api_get_customer_by_number(self.ref)
         else:
             raise ValidationError(
                 _("Cannot import customer without Fennoa ID or customer number.")
@@ -266,9 +181,7 @@ class ResPartner(models.Model):
         else:
             existing_partner = self.create(vals)
 
-        if not existing_partner.fennoa_binding_ids.filtered(
-            lambda b: b.backend_id == backend
-        ):
+        if not existing_partner.fennoa_binding_id:
             binding_vals = {
                 "backend_id": backend.id,
                 "res_model": self._name,
@@ -316,7 +229,7 @@ class ResPartner(models.Model):
 
         return vals
 
-    def api_create_customer(self, customer_data, partner=None):
+    def fennoa_api_create_customer(self, customer_data, partner=None):
         """Create a new customer in Fennoa using FORM DATA."""
         res = self._fennoa_api_request_make(
             "POST",
@@ -328,7 +241,7 @@ class ResPartner(models.Model):
 
         return res
 
-    def api_update_customer(self, fennoa_id, payload):
+    def fennoa_api_update_customer(self, fennoa_id, payload):
         """Update existing customer in Fennoa using JSON."""
         endpoint = f"/customer_api/{fennoa_id}"
         res = self._fennoa_api_request_make(
@@ -339,7 +252,7 @@ class ResPartner(models.Model):
 
         return res
 
-    def api_get_customer_by_id(self, customer_id) -> dict:
+    def fennoa_api_get_customer_by_id(self, customer_id) -> dict:
         """Fetch customer details by Fennoa internal ID."""
         endpoint = f"/customer_api/{customer_id}"
         try:
@@ -350,7 +263,7 @@ class ResPartner(models.Model):
 
         return res
 
-    def api_get_customer_by_number(self, customer_no) -> dict:
+    def fennoa_api_get_customer_by_number(self, customer_no) -> dict:
         """Fetch customer by external customer number."""
         endpoint = f"/customer_api/get/customer_no/{customer_no}"
         try:

@@ -61,7 +61,8 @@
                                     string="Import settings"
                                 >
                                     <!-- Payments start date shoud be configurable -->
-                                    <!--<field name="payments_start_date" />-->
+                                    <field name="payments_from_date" />
+                                    <field name="payments_to_date" />
                                 </group>
                             </group>
                         </page>

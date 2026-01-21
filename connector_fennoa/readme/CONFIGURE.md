@@ -1,4 +1,4 @@
-1. Make sure the OCA ``queue_job`` framework is available.
+1. Make sure the OCA ``queue_job`` framework is available and configured correctly.
 2. Go to *Connectors > Fennoa*.
 3. Create a backend for each company:
 

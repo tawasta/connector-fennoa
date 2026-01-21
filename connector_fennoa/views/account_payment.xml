@@ -5,9 +5,24 @@
         <field name="model">account.payment</field>
         <field name="inherit_id" ref="account.view_account_payment_form" />
         <field name="arch" type="xml">
+            <xpath expr="//div[@class='oe_button_box']" position="inside">
+                <button
+                    name="action_view_fennoa_bindings"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-external-link"
+                    groups="base.group_erp_manager"
+                >
+                    <field
+                        name="fennoa_binding_count"
+                        widget="statinfo"
+                        string="Fennoa bindings"
+                    />
+                </button>
+            </xpath>
+
             <field name="date" position="after">
-                <field name="fennoa_payment_id" readonly="1" />
-                <field name="fennoa_invoice_id" readonly="1" />
+                <field name="fennoa_id" readonly="1" />
             </field>
         </field>
     </record>
