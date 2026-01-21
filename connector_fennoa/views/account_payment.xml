@@ -5,7 +5,7 @@
         <field name="model">account.payment</field>
         <field name="inherit_id" ref="account.view_account_payment_form" />
         <field name="arch" type="xml">
-            <xpath expr="//div[@class='oe_button_box']" position="inside">
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button
                     name="action_view_fennoa_bindings"
                     type="object"
@@ -20,10 +20,6 @@
                     />
                 </button>
             </xpath>
-
-            <field name="date" position="after">
-                <field name="fennoa_id" readonly="1" />
-            </field>
         </field>
     </record>
 </odoo>
