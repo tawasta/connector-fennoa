@@ -268,7 +268,8 @@ class AccountMove(models.Model):
         Fetch and update the invoice details from Fennoa
         """
         for record in self:
-            res = self.fennoa_api_get_sales_invoice(record.fennoa_id)
+            fennoa_id = record.fennoa_binding_id.external_id
+            res = self.fennoa_api_get_sales_invoice(fennoa_id)
             sale_invoice = res.get("SalesInvoice", {})
             # TODO: create import mapper to handle more fields
             invoice_no = sale_invoice.get("invoice_no")
