@@ -240,7 +240,7 @@ class FennoaBackend(models.Model):
 
         payment_list = self.api_get_sales_payments(from_date, to_date)
 
-        if not payment_list:
+        if not payment_list or not isinstance(payment_list, list):
             return "No payments to import"
 
         Payment = self.env["account.payment"]

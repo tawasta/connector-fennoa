@@ -4,7 +4,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import html2plaintext
 
-from odoo.addons.queue_job.delay import group
+from odoo.addons.queue_job.delay import chain
 
 _logger = logging.getLogger(__name__)
 
@@ -249,11 +249,7 @@ class AccountMove(models.Model):
                     "id": move.id,
                 }
 
-                move.with_delay(
-                    description=job_desc,
-                    priority=10,
-                    max_retries=5,
-                )._fennoa_export_record()
+                move.with_delay(description=job_desc)._fennoa_export_record()
 
         return True
 
@@ -265,23 +261,36 @@ class AccountMove(models.Model):
                 body=_("Invoice approved in Fennoa."),
                 subtype_xmlid="mail.mt_note",
             )
-        return True
+        return _("Invoice(s) approved in Fennoa.")
 
-    def action_fennoa_get_invoice_number(self):
+    def action_fennoa_get_invoice_details(self):
         """
-        Fetch and update the invoice number from Fennoa
+        Fetch and update the invoice details from Fennoa
         """
         for record in self:
             res = self.fennoa_api_get_sales_invoice(record.fennoa_id)
             sale_invoice = res.get("SalesInvoice", {})
+            # TODO: create import mapper to handle more fields
             invoice_no = sale_invoice.get("invoice_no")
+            payment_reference = sale_invoice.get("banking_reference")
 
             if invoice_no and invoice_no != record.name:
+                record.name = invoice_no  # Update the invoice number in Odoo
                 record.message_post(
                     body=_("Fetched invoice number '%s' from Fennoa." % invoice_no),
                     subtype_xmlid="mail.mt_note",
                 )
-                record.name = invoice_no  # Update the invoice number in Odoo
+            if payment_reference and payment_reference != record.payment_reference:
+                record.payment_reference = (
+                    payment_reference
+                )  # Update the payment reference in Odoo
+                record.message_post(
+                    body=_(
+                        "Fetched payment reference '%s' from Fennoa."
+                        % payment_reference
+                    ),
+                    subtype_xmlid="mail.mt_note",
+                )
 
     # endregion
 
@@ -304,9 +313,9 @@ class AccountMove(models.Model):
         if vals.get("payment_id"):
             for record in self.filtered(lambda r: r.is_entry()):
                 # Send the payment to Fennoa
-                job_desc = (
+                job_desc = _(
                     "Fennoa: send payment for invoice %s to Fennoa",
-                    record.display_name,
+                    record.name,
                 )
                 record.payment_id.with_delay(
                     description=job_desc
@@ -317,6 +326,14 @@ class AccountMove(models.Model):
     def _fennoa_export_record(self):
         """Send a single invoice to Fennoa (called directly or via with_delay)."""
         self.ensure_one()
+
+        if self.fennoa_binding_id:
+            raise UserError(
+                _(
+                    "Invoice '%s' has already been exported to Fennoa.",
+                    self.display_name,
+                )
+            )
 
         if self.move_type not in ("out_invoice", "out_refund"):
             raise UserError(
@@ -335,7 +352,23 @@ class AccountMove(models.Model):
 
         self.fennoa_api_create_sales_invoice(payload)
 
-        self.fennoa_sent_date = fields.Datetime.now()
+        vals = {
+            "fennoa_sent_date": fields.Datetime.now(),
+        }
+        # Set temporary prefix for invoice to avoid confusion and conflicts,
+        # if Odoo is not in sync with Fennoa sequence
+        # Fennoa will provide the final invoice number after approval
+        if self.name[0:3] != "INV":
+            new_name = f"INV/{self.name}"
+            i = 1
+            while self.search([("name", "=", new_name)]):
+                # If there is an overlapping name, add a sequence number
+                new_name = new_name + f"_{i}"
+                i += 1
+
+            vals["name"] = new_name
+
+        self.update(vals)
 
         self.message_post(
             body=_("Invoice was sent to Fennoa"),
@@ -349,15 +382,15 @@ class AccountMove(models.Model):
             self.delayable(description=job_desc).action_fennoa_approve_invoice()
         )
 
-        job_desc = f"Fennoa: fetch invoice number for invoice ID {self.id}"
+        job_desc = f"Fennoa: fetch invoice details for invoice ID {self.id}"
         delayables.append(
-            self.delayable(description=job_desc).action_fennoa_get_invoice_number()
+            self.delayable(description=job_desc).action_fennoa_get_invoice_details()
         )
 
         # TODO: auto-send (add to connector config)
         # job_send_to_customer = self.delayable().action_fennoa_send_invoice()
 
-        group(*delayables).delay()
+        chain(*delayables).delay()
 
     # endregion
 

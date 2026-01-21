@@ -105,8 +105,17 @@ class AccountPayment(models.Model):
             )
 
     def fennoa_export_mapper(self):
+        """
+        Map Odoo payment fields to Fennoa payment fields
+        """
+        if len(self.reconciled_invoice_ids) == 1:
+            invoice_number = self.reconciled_invoice_ids.name or ""
+        else:
+            # TODO: this invoice number mapping is hacky and should be improved
+            invoice_number = self.ref and self.ref.strip("/INV") or ""
+
         vals = {
-            "invoice_no": self.ref,
+            "invoice_no": invoice_number,
             "payment_date": self.date.strftime("%Y-%m-%d"),
             "sum": self.amount,
             # TODO: Map payment method
@@ -121,11 +130,23 @@ class AccountPayment(models.Model):
         Export payment to Fennoa
         """
         self.ensure_one()
+
+        if self.fennoa_binding_id:
+            msg = _(
+                "Payment '%s' has already been exported to Fennoa.",
+                self.display_name,
+            )
+            return msg
+
         payload = self.fennoa_export_mapper()
         result = self.fennoa_api_create_payment(payload)
         self.fennoa_sent_date = fields.Datetime.now()
         self.message_post(body=_("Exported payment to Fennoa"))
-        return result
+        for invoice in self.reconciled_invoice_ids:
+            invoice.message_post(
+                body=_(_("Payment %s sent to Fennoa", self._get_html_link()))
+            )
+        return _("Payment exported to Fennoa with ID %s.") % result.get("id")
 
     def fennoa_api_create_payment(self, payload):
         """

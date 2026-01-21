@@ -22,7 +22,7 @@ class FennoaBindingMixin(models.AbstractModel):
         compute="_compute_fennoa_binding_id",
     )
     fennoa_id = fields.Integer(
-        string="Fennoa Invoice ID",
+        string="Fennoa ID",
         related="fennoa_binding_id.external_id",
         compute="_compute_fennoa_binding_id",
     )
@@ -44,7 +44,7 @@ class FennoaBindingMixin(models.AbstractModel):
         string="Sent to Fennoa",
         readonly=True,
         copy=False,
-        help="Timestamp when this invoice was successfully sent to Fennoa.",
+        help="Timestamp when this record was successfully sent to Fennoa.",
     )
 
     def _compute_fennoa_binding_count(self):
@@ -96,14 +96,6 @@ class FennoaBindingMixin(models.AbstractModel):
             )
 
         for record in self:
-            if record.fennoa_binding_id:
-                raise UserError(
-                    _(
-                        "Record '%s' has already been exported to Fennoa.",
-                        record.display_name,
-                    )
-                )
-
             if not record.fennoa_export:
                 raise UserError(_("Fennoa export not enabled for this record."))
 

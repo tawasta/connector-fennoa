@@ -24,8 +24,8 @@ Fennoa Connector
 
 Odoo connector for integrating with the Fennoa accounting platform.
 
-This module synchronizes customer master data, exports sales invoices
-(including credit notes) and imports payments from Fennoa into Odoo.
+This module synchronizes customer data, exports sales invoices
+(including credit notes) and synchronized payment data
 
 **Table of contents**
 
@@ -35,49 +35,14 @@ This module synchronizes customer master data, exports sales invoices
 Use Cases / Context
 ===================
 
-- Fennoa backend configuration per company
+With this integration, you can handle the day-to-day invoicing in Odoo
+and have everything automatically synced to Fennoa for accounting and
+payment processing.
 
-- Customer sync:
-
-  - Import customers from Fennoa on demand
-  - Auto-create customer in Fennoa when sending invoices if *Send to
-    Fennoa* is enabled
-  - Store Fennoa customer ID and customer number on partners
-
-- Sales invoice export:
-
-  - Export customer invoices and credit notes (``out_invoice`` and
-    ``out_refund``)
-  - Correct handling of credit notes: credit invoices are sent with
-    negative total
-  - Delivery method mapping from Odoo ``transmit_method_id`` to Fennoa
-    (Finvoice / email / postal)
-  - E-invoice address (``edicode``) and operator are sent when using
-    Finvoice
-  - E-mail delivery uses partner email address
-  - Per-invoice flags for sending and delayed (queued) sending
-  - Store Fennoa invoice ID and sent timestamp on the invoice
-
-- Payment import:
-
-  - Import Fennoa sales invoice payments via API
-  - Create Odoo payments using the standard payment register wizard
-  - Link payments to Fennoa payment and invoice IDs on
-    ``account.payment``
-  - Designed to run via a cron job (hourly sync)
-
-- Logging and traceability:
-
-  - All API calls stored in ``fennoa.binding`` with request/response
-    payloads
-  - Smart buttons on invoices and partners to open related Fennoa logs
-  - Dedicated menu, tree, form and search views for bindings
-
-- Queue job integration:
-
-  - Uses ``queue_job`` channels for background processing
-  - Separate Fennoa job channel for importing customers and exporting
-    invoices
+Managing partners and creating invoices and payments are done in Odoo
+very much the same way as they would be done normally in Odoo. The
+integration aims to be as non-intrusive as possible, while keeping the
+user up-to-date about what's happening at Fennoa's side.
 
 Installation
 ============
@@ -87,7 +52,8 @@ Install the module from Apps
 Configuration
 =============
 
-1. Make sure the OCA ``queue_job`` framework is available.
+1. Make sure the OCA ``queue_job`` framework is available and configured
+   correctly.
 
 2. Go to *Connectors > Fennoa*.
 
@@ -109,94 +75,47 @@ Configuration
 Usage
 =====
 
-Customer sync
--------------
+Customers
+---------
 
+- Partners can be imported / updated from Fennoa to Odoo
 - On partners, the checkbox **Send to Fennoa** controls whether the
   partner should be created/updated in Fennoa.
+- When an outgoing invoice is sent to Fennoa, the customer is
+  exported/updated to to fennoa.
 
-- When an outgoing invoice is sent to Fennoa, the customer is ensured to
-  exist in Fennoa first (created if necessary).
+Sale invoices
+-------------
 
-- Fennoa identifiers are stored on the partner:
+- Sale invoices and credit notes can be sent to Fennoa
+- Payments can be sent to Fennoa and matched to invoices
+- Payments can be fetched from Fennoa to Odoo and matched to invoices
 
-  - ``fennoa_customer_id`` – internal Fennoa ID
-  - ``fennoa_customer_no`` – external customer number
+If you are sending just one invoice, it will be sent immediately. When
+sending multiple invoices (mass invoicing), the invoices will be sent in
+a queue.
 
-Invoice sending
----------------
+When sending invoice to Fennoa, Odoo assigns a temporary invoice number
+"INV/123" to invoice, and after invoice is approved in Fennoa, Odoo
+updates the invoice number and payment reference from there.
 
-- On customer invoices and credit notes, the **Fennoa** tab contains:
+Payments
+--------
 
-  - **Send to Fennoa** – controls whether the invoice is exported
-  - **Fennoa delayed send** – if enabled, sending uses a background
-    queue job
-  - **Fennoa Invoice ID** – ID of the invoice in Fennoa
-  - **Sent to Fennoa** – timestamp when the invoice was successfully
-    sent
-
-- When an invoice is posted and *Send to Fennoa* is enabled, the
-  connector:
-
-  - Ensures the customer exists in Fennoa
-
-  - Builds a FORM-DATA payload for the Fennoa *sales_api/add* endpoint
-
-  - Derives delivery method and e-invoice/email details from:
-
-    - Partner ``edicode`` and e-invoice operator (Finvoice)
-    - Partner email (email delivery)
-    - Invoice ``transmit_method_id`` (einvoice / mail / post)
-
-  - Sends the invoice immediately or via queue job depending on **Fennoa
-    delayed send**
-
-- A **Post & Send to Fennoa** button is available on the invoice form to
-  post and export in a single action.
-
-- Credit notes (``out_refund``) are exported as Fennoa credit invoices
-  with negative line quantities and positive unit prices, so that the
-  total sum is negative as required by the Fennoa API.
-
-Payment import
---------------
-
-- The cron job *Fennoa Payment Sync* calls the backend method
-  ``action_import_payments`` every hour.
-
-- The connector fetches sales invoice payments from Fennoa for a given
-  date range and:
-
-  - Finds the corresponding Odoo invoice by ``fennoa_invoice_id``
-
-  - Uses the standard *Payment Register* wizard to create payments
-
-  - Links the created payments with Fennoa IDs via:
-
-    - ``fennoa_payment_id`` – payment ID in Fennoa
-    - ``fennoa_invoice_id`` – invoice ID in Fennoa
-
-- These fields are visible on the payment form.
-
-Log access
-----------
-
-- On invoices and partners, the **Fennoa Logs** smart button opens
-  related ``fennoa.binding`` entries for the record.
-
-- The full log browser is available via *Fennoa > Bindings*, providing:
-
-  - List and form views of all API calls
-  - Request payload and response bodies (with code widgets)
-  - Search and group-by options (backend, method, model, status, etc.)
+- Sale invoice payments will be sent to Fennoa and will be matched to
+  existing invoices
+- Payments will be fetched automatically from Fennoa and matched to
+  invoices in Odoo
 
 Known issues / Roadmap
 ======================
 
 - Additional Fennoa API endpoints (e.g. purchase invoices) are not yet
   covered.
-- Sales invoice payload currently uses a minimal set of fields; more
-  optional fields from the Fennoa API may be added in the future.
+- More transparency to users (about what happend between Odoo and
+  Fennoa)
+- Less redundant functionality
+- Add tests
 
 Changelog
 =========

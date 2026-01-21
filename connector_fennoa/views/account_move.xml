@@ -28,7 +28,7 @@
                 />
             </xpath>
 
-            <xpath expr="//div[@class='oe_button_box']" position="inside">
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button
                     name="action_view_fennoa_bindings"
                     type="object"
@@ -84,11 +84,11 @@
                             />
                             -->
                             <button
-                                name="action_fennoa_get_invoice_number"
+                                name="action_fennoa_get_invoice_details"
                                 type="object"
                                 class=""
-                                string="Get invoice number"
-                                help="Fetch and update the invoice number from Fennoa"
+                                string="Get invoice details"
+                                help="Fetch and update the invoice details from Fennoa"
                                 invisible="not fennoa_binding_count"
                                 colspan="2"
                             />
