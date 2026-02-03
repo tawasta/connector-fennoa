@@ -17,11 +17,16 @@
 
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-
+                        <button
+                            name="action_open_schedulers"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-clock-o"
+                        >Schedulers</button>
                     </div>
 
                     <group>
-                        <group name="settings" string="Setting">
+                        <group name="settings" string="Settings">
                             <field name="company_id" />
                             <field name="base_url" />
                             <field name="client_identifier" />
