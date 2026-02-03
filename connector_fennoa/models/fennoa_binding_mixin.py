@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -19,11 +19,6 @@ class FennoaBindingMixin(models.AbstractModel):
     fennoa_binding_id = fields.Many2one(
         comodel_name="fennoa.binding",
         string="Fennoa Binding",
-        compute="_compute_fennoa_binding_id",
-    )
-    fennoa_id = fields.Integer(
-        string="Fennoa ID",
-        related="fennoa_binding_id.external_id",
         compute="_compute_fennoa_binding_id",
     )
     fennoa_export = fields.Boolean(
@@ -51,13 +46,10 @@ class FennoaBindingMixin(models.AbstractModel):
         for record in self:
             record.fennoa_binding_count = len(record.fennoa_binding_ids)
 
+    @api.depends("fennoa_binding_ids")
     def _compute_fennoa_binding_id(self):
         FennoaBinding = self.env["fennoa.binding"].sudo()
         for record in self:
-            vals = {
-                "fennoa_binding_id": False,
-                "fennoa_id": False,
-            }
             company = record.company_id or self.env.company
             binding = FennoaBinding.search(
                 [
@@ -67,14 +59,8 @@ class FennoaBindingMixin(models.AbstractModel):
                 ],
                 limit=1,
             )
-            if binding:
-                vals.update(
-                    {
-                        "fennoa_binding_id": binding.id,
-                        "fennoa_id": binding.external_id,
-                    }
-                )
-            record.update(vals)
+
+            record.fennoa_binding_id = binding
 
     def action_view_fennoa_bindings(self):
         self.ensure_one()

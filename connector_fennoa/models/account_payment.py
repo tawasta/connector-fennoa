@@ -97,11 +97,11 @@ class AccountPayment(models.Model):
             _logger.info(msg)
             return msg
         else:
-            raise ValidationError(
-                _(
-                    "Related invoice with Fennoa ID %s not found in Odoo.",
-                    fennoa_invoice_id,
-                )
+            # Matching invoice not found, no actions needed
+            # (There may be unrelated payments in Fennoa)
+            return _(
+                "Related invoice with Fennoa ID %s not found in Odoo.",
+                fennoa_invoice_id,
             )
 
     def fennoa_export_mapper(self):

@@ -4,7 +4,7 @@
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form" />
         <field name="arch" type="xml">
-            <xpath expr="//div[@class='oe_button_box']" position="inside">
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button
                     name="action_view_fennoa_bindings"
                     type="object"
@@ -29,7 +29,6 @@
                     <group>
                         <group colspan="2">
                             <field name="fennoa_export" widget="boolean_toggle" />
-                            <field name="fennoa_id" invisible="not fennoa_id" />
                         </group>
                         <group>
                             <button

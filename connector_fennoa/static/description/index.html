@@ -378,21 +378,25 @@ ul.auto-toc {
 <ul class="simple">
 <li><a class="reference internal" href="#use-cases-context" id="toc-entry-1">Use Cases / Context</a></li>
 <li><a class="reference internal" href="#installation" id="toc-entry-2">Installation</a></li>
-<li><a class="reference internal" href="#configuration" id="toc-entry-3">Configuration</a></li>
-<li><a class="reference internal" href="#usage" id="toc-entry-4">Usage</a><ul>
-<li><a class="reference internal" href="#customers" id="toc-entry-5">Customers</a></li>
-<li><a class="reference internal" href="#sale-invoices" id="toc-entry-6">Sale invoices</a></li>
-<li><a class="reference internal" href="#payments" id="toc-entry-7">Payments</a></li>
+<li><a class="reference internal" href="#configuration" id="toc-entry-3">Configuration</a><ul>
+<li><a class="reference internal" href="#fennoa" id="toc-entry-4">Fennoa</a></li>
+<li><a class="reference internal" href="#odoo" id="toc-entry-5">Odoo</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#known-issues-roadmap" id="toc-entry-8">Known issues / Roadmap</a></li>
-<li><a class="reference internal" href="#changelog" id="toc-entry-9">Changelog</a></li>
-<li><a class="reference internal" href="#bug-tracker" id="toc-entry-10">Bug Tracker</a></li>
-<li><a class="reference internal" href="#credits" id="toc-entry-11">Credits</a><ul>
-<li><a class="reference internal" href="#authors" id="toc-entry-12">Authors</a></li>
-<li><a class="reference internal" href="#contributors" id="toc-entry-13">Contributors</a></li>
-<li><a class="reference internal" href="#other-credits" id="toc-entry-14">Other credits</a></li>
-<li><a class="reference internal" href="#maintainers" id="toc-entry-15">Maintainers</a></li>
+<li><a class="reference internal" href="#usage" id="toc-entry-6">Usage</a><ul>
+<li><a class="reference internal" href="#customers" id="toc-entry-7">Customers</a></li>
+<li><a class="reference internal" href="#sale-invoices" id="toc-entry-8">Sale invoices</a></li>
+<li><a class="reference internal" href="#payments" id="toc-entry-9">Payments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#known-issues-roadmap" id="toc-entry-10">Known issues / Roadmap</a></li>
+<li><a class="reference internal" href="#changelog" id="toc-entry-11">Changelog</a></li>
+<li><a class="reference internal" href="#bug-tracker" id="toc-entry-12">Bug Tracker</a></li>
+<li><a class="reference internal" href="#credits" id="toc-entry-13">Credits</a><ul>
+<li><a class="reference internal" href="#authors" id="toc-entry-14">Authors</a></li>
+<li><a class="reference internal" href="#contributors" id="toc-entry-15">Contributors</a></li>
+<li><a class="reference internal" href="#other-credits" id="toc-entry-16">Other credits</a></li>
+<li><a class="reference internal" href="#maintainers" id="toc-entry-17">Maintainers</a></li>
 </ul>
 </li>
 </ul>
@@ -413,28 +417,48 @@ user up-to-date about what’s happening at Fennoa’s side.</p>
 </div>
 <div class="section" id="configuration">
 <h1><a class="toc-backref" href="#toc-entry-3">Configuration</a></h1>
+<p>You need to:</p>
 <ol class="arabic simple">
-<li>Make sure the OCA <tt class="docutils literal">queue_job</tt> framework is available and configured
-correctly.</li>
-<li>Go to <em>Connectors &gt; Fennoa</em>.</li>
-<li>Create a backend for each company:<ul>
-<li><strong>Base URL</strong> (default: <tt class="docutils literal"><span class="pre">https://app.fennoa.com/api</span></tt>)</li>
-<li><strong>API User</strong> (Fennoa client identifier)</li>
-<li><strong>API Key</strong> (plain text or Base64-encoded key)</li>
-<li><strong>Company</strong></li>
-</ul>
-</li>
-<li>Press <strong>Test Connection</strong> to validate credentials.</li>
-<li>(Optional) Click <strong>Import Customers</strong> to fetch customer master data
-from Fennoa.</li>
-<li>A scheduled cron job <em>Fennoa Payment Sync</em> is created to import
-payments every hour.</li>
+<li>Create <strong>Fennoa API user</strong> in Fennoa</li>
+<li>Create <strong>Fennoa Backend</strong> in Odoo</li>
+</ol>
+<div class="section" id="fennoa">
+<h2><a class="toc-backref" href="#toc-entry-4">Fennoa</a></h2>
+<ol class="arabic simple">
+<li>Go to <em>Fennoa</em> <a class="reference external" href="https://app.fennoa.com/">https://app.fennoa.com/</a> with your admin user</li>
+<li>Go to <em>Fennoa &gt; Users (Käyttäjät)</em></li>
+<li>Create a new <em>API user</em> (<em>API-käyttäjä</em>) <img alt="image1" src="https://raw.githubusercontent.com/tawasta/connector-fennoa/17.0/connector_fennoa/static/description/fennoa_api_user_01.png" /></li>
+<li>Select <strong>General API user</strong> (<em>Yleinen API-käyttäjä</em>), or <strong>Odoo
+(Futural)</strong> <img alt="image2" src="https://raw.githubusercontent.com/tawasta/connector-fennoa/17.0/connector_fennoa/static/description/fennoa_api_user_02.png" /></li>
+<li>Give an user name (e.g. <em>Futural Odoo</em>), and necessary permissions.
+Click <em>Create API user</em> (<em>Luo API-käyttäjä</em>) <img alt="image3" src="https://raw.githubusercontent.com/tawasta/connector-fennoa/17.0/connector_fennoa/static/description/fennoa_api_user_03.png" /></li>
+<li>Copy your <em>API-user</em> (<em>API-käyttäjä</em>) and <em>API-key</em> (<em>API-avain</em>) to
+a safe place <img alt="image4" src="https://raw.githubusercontent.com/tawasta/connector-fennoa/17.0/connector_fennoa/static/description/fennoa_api_user_04.png" /></li>
 </ol>
 </div>
+<div class="section" id="odoo">
+<h2><a class="toc-backref" href="#toc-entry-5">Odoo</a></h2>
+<ol class="arabic simple">
+<li>Make sure the OCA <a class="reference external" href="https://github.com/OCA/queue">Job Queue</a>
+framework is available and configured correctly.</li>
+<li>Go to <em>Connectors &gt; Fennoa</em>.</li>
+<li>Create a backend for your company (or companies). Use the <em>API-user</em>
+and <em>API-key</em> from Fennoa API User <img alt="image5" src="https://raw.githubusercontent.com/tawasta/connector-fennoa/17.0/connector_fennoa/static/description/fennoa_backend_01.png" /></li>
+<li>Press <strong>Test Connection</strong> to validate credentials. You should see a
+success-message <img alt="image6" src="https://raw.githubusercontent.com/tawasta/connector-fennoa/17.0/connector_fennoa/static/description/fennoa_backend_02.png" /></li>
+<li>(Optional) Click <strong>Import Customers</strong> to fetch customer master data
+from Fennoa.</li>
+<li>(Optional) Configure/disable Schedulers by clicking <strong>Scheduled
+Actions</strong>-button</li>
+</ol>
+<p>Now you should be good to go! Create an invoice and try sending it. If
+you get an error, read the error description and act accordingly.</p>
+</div>
+</div>
 <div class="section" id="usage">
-<h1><a class="toc-backref" href="#toc-entry-4">Usage</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-6">Usage</a></h1>
 <div class="section" id="customers">
-<h2><a class="toc-backref" href="#toc-entry-5">Customers</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-7">Customers</a></h2>
 <ul class="simple">
 <li>Partners can be imported / updated from Fennoa to Odoo</li>
 <li>On partners, the checkbox <strong>Send to Fennoa</strong> controls whether the
@@ -444,7 +468,7 @@ exported/updated to to fennoa.</li>
 </ul>
 </div>
 <div class="section" id="sale-invoices">
-<h2><a class="toc-backref" href="#toc-entry-6">Sale invoices</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-8">Sale invoices</a></h2>
 <ul class="simple">
 <li>Sale invoices and credit notes can be sent to Fennoa</li>
 <li>Payments can be sent to Fennoa and matched to invoices</li>
@@ -458,7 +482,7 @@ a queue.</p>
 updates the invoice number and payment reference from there.</p>
 </div>
 <div class="section" id="payments">
-<h2><a class="toc-backref" href="#toc-entry-7">Payments</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-9">Payments</a></h2>
 <ul class="simple">
 <li>Sale invoice payments will be sent to Fennoa and will be matched to
 existing invoices</li>
@@ -468,7 +492,7 @@ invoices in Odoo</li>
 </div>
 </div>
 <div class="section" id="known-issues-roadmap">
-<h1><a class="toc-backref" href="#toc-entry-8">Known issues / Roadmap</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-10">Known issues / Roadmap</a></h1>
 <ul class="simple">
 <li>Additional Fennoa API endpoints (e.g. purchase invoices) are not yet
 covered.</li>
@@ -479,12 +503,12 @@ Fennoa)</li>
 </ul>
 </div>
 <div class="section" id="changelog">
-<h1><a class="toc-backref" href="#toc-entry-9">Changelog</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-11">Changelog</a></h1>
 <p>17.0.0.1.0 (2025-12-08)</p>
 <p>Initial version</p>
 </div>
 <div class="section" id="bug-tracker">
-<h1><a class="toc-backref" href="#toc-entry-10">Bug Tracker</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-12">Bug Tracker</a></h1>
 <p>Bugs are tracked on <a class="reference external" href="https://github.com/tawasta/connector-fennoa/issues">GitHub Issues</a>.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
@@ -492,15 +516,15 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 <p>Do not contact contributors directly about support or help with technical issues.</p>
 </div>
 <div class="section" id="credits">
-<h1><a class="toc-backref" href="#toc-entry-11">Credits</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-13">Credits</a></h1>
 <div class="section" id="authors">
-<h2><a class="toc-backref" href="#toc-entry-12">Authors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-14">Authors</a></h2>
 <ul class="simple">
 <li>Futural</li>
 </ul>
 </div>
 <div class="section" id="contributors">
-<h2><a class="toc-backref" href="#toc-entry-13">Contributors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-15">Contributors</a></h2>
 <ul class="simple">
 <li><a class="reference external" href="https://futural.fi">Futural Oy</a>:<ul>
 <li>Valtteri Lattu <a class="reference external" href="mailto:valtteri.lattu&#64;futural.fi">valtteri.lattu&#64;futural.fi</a></li>
@@ -510,14 +534,14 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 </ul>
 </div>
 <div class="section" id="other-credits">
-<h2><a class="toc-backref" href="#toc-entry-14">Other credits</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-16">Other credits</a></h2>
 <p>The development of this module has been financially supported by:</p>
 <ul class="simple">
 <li><a class="reference external" href="https://futural.fi">Futural Oy</a></li>
 </ul>
 </div>
 <div class="section" id="maintainers">
-<h2><a class="toc-backref" href="#toc-entry-15">Maintainers</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-17">Maintainers</a></h2>
 <p>This module is part of the <a class="reference external" href="https://github.com/tawasta/connector-fennoa/tree/17.0/connector_fennoa">tawasta/connector-fennoa</a> project on GitHub.</p>
 <p>You are welcome to contribute.</p>
 </div>

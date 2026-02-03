@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
     <record id="ir_cron_fennoa_payment_sync" model="ir.cron">
-        <field name="name">Fennoa Payment Sync</field>
+        <field name="name">Fennoa: Fetch payment status</field>
         <field name="model_id" ref="model_fennoa_backend" />
         <field name="state">code</field>
         <field name="code">model._cron_import_payments()</field>

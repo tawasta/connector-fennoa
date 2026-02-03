@@ -26,7 +26,7 @@ class FennoaBackend(models.Model):
     )
     secret_key_b64 = fields.Char(
         required=True,
-        string="API Key (base64 or plain)",
+        string="API Key",
         help="Fennoa API key. Can be stored as base64 or as plain text.",
     )
     company_id = fields.Many2one(
@@ -44,7 +44,12 @@ class FennoaBackend(models.Model):
         string="Import Payments To",
         readonly=True,
     )
+
     # endregion fields
+
+    # region compute methods
+
+    # endregion compute methods
 
     # region constraints and helpers
 
@@ -109,6 +114,28 @@ class FennoaBackend(models.Model):
                 "type": "success",
                 "sticky": False,
             },
+        }
+
+    def action_open_schedulers(self):
+        """Open Fennoa-related cron jobs."""
+        cron_jobs = (
+            self.env["ir.cron"]
+            .with_context(active_test=False)
+            .search(
+                [
+                    ("name", "like", "Fennoa%"),
+                ]
+            )
+        )
+        backend_model = self.env.ref("connector_fennoa.model_fennoa_backend")
+
+        return {
+            "name": _("Fennoa Schedulers"),
+            "type": "ir.actions.act_window",
+            "res_model": "ir.cron",
+            "view_mode": "tree,form",
+            "domain": [("id", "in", cron_jobs.ids)],
+            "context": {"default_model_id": backend_model.id},
         }
 
     def action_import_customers(self):
