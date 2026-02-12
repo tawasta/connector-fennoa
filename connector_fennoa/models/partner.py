@@ -112,7 +112,7 @@ class ResPartner(models.Model):
             "email": self.email or "",
             "phone": self.phone or "",
             "website": self.website or "",
-            "business_id": self.vat or "",
+            "business_id": self.company_registry or "",
             "account_type_id": 1 if self.is_company else 2,
             # TODO: contact person handling, this is incorrect
             # "contact_person": self.child_ids[:1].name if self.child_ids else "",
@@ -220,7 +220,7 @@ class ResPartner(models.Model):
             "country_id": country.id if country else False,
             "email": customer_data.get("email") or "",
             "phone": customer_data.get("phone") or "",
-            "vat": customer_data.get("business_id") or "",
+            "company_registry": customer_data.get("business_id") or "",
             "comment": customer_data.get("description") or "",
             "website": customer_data.get("website") or "",
             "ref": customer_data.get("customer_no") or "",
