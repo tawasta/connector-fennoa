@@ -14,7 +14,16 @@ class ApiRequestMixin(models.Model):
     def _get_fennoa_backend(self):
         company = self.company_id or self.env.company
 
-        backend = self.env["fennoa.backend"].search([("company_id", "=", company.id)])
+        backend = (
+            self.env["fennoa.backend"]
+            .sudo()
+            .search(
+                [
+                    ("company_id", "=", company.id),
+                ],
+                limit=1,
+            )
+        )
 
         return backend
 
@@ -56,6 +65,9 @@ class ApiRequestMixin(models.Model):
 
             if isinstance(errors, dict):
                 for key, value in errors.items():
+                    if isinstance(value, list):
+                        # Error list seem to have duplicate errors some times
+                        value = list(set(value))
                     errors = ", ".join(value) if isinstance(value, list) else value
                     messages.append(f"{key}: {errors}")
                 error_msg = "\n".join(messages)
