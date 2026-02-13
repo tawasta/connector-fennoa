@@ -14,6 +14,10 @@ class AccountMove(models.Model):
     _inherit = ["account.move", "api.request.mixin", "fennoa.binding.mixin"]
 
     # region Fields
+    # TODO: use an existing field?
+    order_identifier = fields.Char(
+        help="Optional field for purchase order reference in Fennoa",
+    )
 
     # endregion
 
@@ -160,11 +164,14 @@ class AccountMove(models.Model):
             # Omitting payment reference will force Fennoa to calculate it
             # "banking_reference": self.payment_reference or "",
             "locale": self._get_fennoa_locale_code(),
+            # "Our reference" should be salesperson, but this should be behind a setting
             # "our_reference": self.invoice_user_id.name or "",
             "your_reference": self.ref or "",
-            "contact_person": self.invoice_user_id.name or "",
+            "order_identifier": self.order_identifier or "",
+            # The contact person should be THEIR contact person, "tilaaja"
+            # "contact_person": self.invoice_user_id.name or "",
             # "penal_interest": "" // TODO: inherit account_invoice_overdue_interest
-            "notes_before": html2plaintext(self.narration) or "",
+            "notes_before": html2plaintext(self.narration) if self.narration else "",
             "delivery_method": delivery_method,
             # TODO: internal notes
             # "notes_internal": self.description or "",

@@ -45,6 +45,14 @@
                 </button>
             </xpath>
 
+            <field name="payment_reference" position="attributes">
+                <attribute name="readonly">fennoa_export</attribute>
+            </field>
+
+            <field name="payment_reference" position="after">
+                <field name="order_identifier" />
+            </field>
+
             <xpath expr="//notebook/page[last()]" position="after">
                 <page string="Fennoa" name="fennoa">
                     <group>
