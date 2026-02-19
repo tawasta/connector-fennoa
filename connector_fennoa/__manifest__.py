@@ -20,7 +20,7 @@
 {
     "name": "Fennoa Connector",
     "summary": "Integrate Odoo to Fennoa",
-    "version": "17.0.1.0.2",
+    "version": "17.0.1.1.0",
     "category": "Invoicing & Payments",
     "website": "https://github.com/tawasta/connector-fennoa",
     "author": "Futural",

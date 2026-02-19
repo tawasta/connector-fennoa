@@ -41,6 +41,21 @@
                                     name="sale_invoices_group_invoice_settings"
                                     string="Invoice settings"
                                 >
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        When confirming an invoice in Odoo, the invoice will be automatically approved in Fennoa
+                                    </p>
+                                    <field
+                                        name="sale_invoice_auto_approve"
+                                        widget="boolean_toggle"
+                                    />
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        When confirming an invoice in Odoo, the invoice will be automatically sent to the customer from Fennoa
+                                    </p>
+                                    <field
+                                        name="sale_invoice_auto_send"
+                                        invisible="not sale_invoice_auto_approve"
+                                        widget="boolean_toggle"
+                                    />
 
                                 </group>
                             </group>

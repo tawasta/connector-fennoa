@@ -36,6 +36,18 @@ class FennoaBackend(models.Model):
     )
     binding_ids = fields.One2many("fennoa.binding", "backend_id", readonly=True)
 
+    sale_invoice_auto_approve = fields.Boolean(
+        string="Auto-approve sales invoice",
+        help="Auto-approve sales invoices on confirmation",
+        default=False,
+    )
+
+    sale_invoice_auto_send = fields.Boolean(
+        string="Auto-send sales invoice",
+        help="Auto-send sales invoices from Fennoa to customer on confirmation",
+        default=False,
+    )
+
     payments_from_date = fields.Date(
         string="Import Payments From",
         readonly=True,
