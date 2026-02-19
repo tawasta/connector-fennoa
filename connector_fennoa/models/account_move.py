@@ -178,6 +178,14 @@ class AccountMove(models.Model):
             # "notes_internal": self.description or "",
         }
 
+        if self.partner_shipping_id and self.partner_shipping_id != self.partner_id:
+            shipping_partner = self.partner_shipping_id
+            payload["shipping_name"] = shipping_partner.name or ""
+            # payload["shipping_name2"] = // Secondary name of the shipping address
+            payload["shipping_address"] = shipping_partner.get_combined_street()
+            payload["shipping_postalcode"] = shipping_partner.zip or ""
+            payload["shipping_city"] = shipping_partner.city or ""
+
         if einvoice_address:
             payload["einvoice_address"] = einvoice_address
         if einvoice_operator:
