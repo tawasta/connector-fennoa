@@ -241,9 +241,22 @@ class ResPartner(models.Model):
 
         return res
 
-    def fennoa_api_update_customer(self, fennoa_id, payload):
+    def fennoa_api_update_customer(self, customer_no, payload):
         """Update existing customer in Fennoa using JSON."""
-        endpoint = f"/customer_api/{fennoa_id}"
+        if not customer_no:
+            raise ValidationError(_("Customer number is required for partner."))
+
+        if len(self.env["res.partner"].search([("ref", "=", customer_no)])) > 1:
+            raise UserError(
+                _(
+                    "Multiple partners found with the same reference "
+                    "'%s'. Cannot determine the correct "
+                    "Fennoa customer to update.",
+                    customer_no,
+                )
+            )
+
+        endpoint = f"/customer_api/{customer_no}"
         res = self._fennoa_api_request_make(
             "PUT",
             endpoint,
