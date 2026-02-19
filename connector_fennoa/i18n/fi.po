@@ -1,0 +1,911 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* connector_fennoa
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0-20250725\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-13 07:47+0000\n"
+"PO-Revision-Date: 2026-02-13 09:59+0200\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.8\n"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_binding_form
+msgid "<span class=\"o_stat_text\">Open record</span>"
+msgstr "<span class=\"o_stat_text\">Avaa tietue</span>"
+
+#. module: connector_fennoa
+#: model:ir.model.constraint,message:connector_fennoa.constraint_fennoa_binding_unique_binding
+#, fuzzy
+msgid "A Fennoa binding for this record already exists."
+msgstr "Fennoa-sidos tälle asiakirjalle on jo olemassa."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__secret_key_b64
+msgid "API Key"
+msgstr "API-avain"
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_api_request_mixin
+msgid "API Request Mixin"
+msgstr "API-pyyntöjen Mixin"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__client_identifier
+#, fuzzy
+msgid "API User"
+msgstr "API-käyttäjä"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Are you sure you want to import customers?"
+msgstr "Oletko varma, että haluat tuoda asiakkaat?"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Are you sure you want to import payments?"
+msgstr "Oletko varma, että haluat tuoda maksutapahtumat?"
+
+#. module: connector_fennoa
+#: model:ir.ui.menu,name:connector_fennoa.menu_fennoa_backend
+#, fuzzy
+msgid "Backends"
+msgstr "Taustajärjestelmät"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__base_url
+msgid "Base Url"
+msgstr "Pohja-url"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__binding_ids
+msgid "Binding"
+msgstr "Sidos"
+
+#. module: connector_fennoa
+#: model:ir.ui.menu,name:connector_fennoa.menu_fennoa_binding
+#, fuzzy
+msgid "Bindings"
+msgstr "Sidokset"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, python-format
+msgid "Cannot create customer in Fennoa without a name."
+msgstr "En voi luoda asiakasta Fennoaan ilman nimitietoa."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, python-format
+msgid "Cannot create customer in Fennoa without country (ISO code)."
+msgstr "En voi luoda asiakasta Fennoaan ilman maatietoa (ISO-koodi)."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, fuzzy, python-format
+msgid "Cannot import customer without Fennoa ID or customer number."
+msgstr "Asiakasta ei voi tuoda ilman Fennoa-tunnistetta tai asiakasnumeroa."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Cannot send invoice to Fennoa without a customer."
+msgstr "En voi lähettää laskua Fennoalle ilman asiakasta."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__company_id
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__company_id
+msgid "Company"
+msgstr "Yritys"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__4
+#, fuzzy
+msgid "Construction services (AE)"
+msgstr "Rakennuspalvelut (AE)"
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_res_partner
+msgid "Contact"
+msgstr "Kontakti"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__create_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__create_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__create_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__create_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__create_uid
+msgid "Created by"
+msgstr "Luonut"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__create_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__create_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__create_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__create_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__create_date
+msgid "Created on"
+msgstr "Luotu"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, python-format
+msgid "Customer must have a country (ISO code) to send invoice to Fennoa."
+msgstr "Asiakkaalla on oltava maa (ISO-koodi), jotta laskun voi lähettää Fennoaan"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Customers"
+msgstr "Asiakkaat"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_account_bank_statement_line__fennoa_export
+#: model:ir.model.fields,help:connector_fennoa.field_account_move__fennoa_export
+#: model:ir.model.fields,help:connector_fennoa.field_account_payment__fennoa_export
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_binding_mixin__fennoa_export
+#: model:ir.model.fields,help:connector_fennoa.field_res_partner__fennoa_export
+#: model:ir.model.fields,help:connector_fennoa.field_res_users__fennoa_export
+msgid "Disable this to prevent exporting to Fennoa"
+msgstr "Jos tämä ei ole valittuna, tietuetta ei lähetetä Fennoaan"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__display_name
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__display_name
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__display_name
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__display_name
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__display_name
+msgid "Display Name"
+msgstr "Näyttönimi"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__1
+msgid "Domestic sales (S) Default"
+msgstr "Kotimaan myynti (S) Oletus"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__7
+msgid "Domestic sales VAT-free (Z)"
+msgstr "Kotimaan myynti, veroton (Z)"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__9
+msgid "Domestic sales, VAT-free, No VAT-liability (O)"
+msgstr "Kotimaan myynti, veroton, ei ALV-velvollisuutta (O)"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__3
+msgid "EU-sales goods (K)"
+msgstr "EU-myynti, tavarat (K)"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__2
+msgid "EU-sales services (K)"
+msgstr "EU-myynti, palvelut (K)"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Export"
+msgstr "Vie"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid ""
+"Export or update all products to Fennoa.\n"
+"                                        <br/>\n"
+"                                        If product doesn't exist, one will be created.\n"
+"                                        If product exists (binding exists), it will be updated."
+msgstr ""
+"Vie tai päivitä kaikki tuotteet Fennoaan.                                        <br/>Jos "
+"tuotetta ei ole, sellainen luodaan.\n"
+"                                        Jos tuote on olemassa (sidos on olemassa), tuote "
+"päivitetään."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Export settings"
+msgstr "Vie asetukset"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__fennoa_export
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__fennoa_export
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__fennoa_export
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding_mixin__fennoa_export
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__fennoa_export
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_users__fennoa_export
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_partner_form
+#, fuzzy
+msgid "Export to Fennoa"
+msgstr "Vienti Fennoaan"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, fuzzy, python-format
+msgid "Exported partner to Fennoa"
+msgstr "Vientikumppani Fennoaan"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, fuzzy, python-format
+msgid "Exported payment to Fennoa"
+msgstr "Vientimaksut Fennoaan"
+
+#. module: connector_fennoa
+#: model:ir.ui.menu,name:connector_fennoa.menu_fennoa_root
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_partner_form
+msgid "Fennoa"
+msgstr "Fennoa"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_backend__base_url
+#, fuzzy
+msgid "Fennoa API base URL, usually https://app.fennoa.com/api"
+msgstr "Fennoa API:n perus-URL, yleensä https://app.fennoa.com/api"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_backend__secret_key_b64
+#, fuzzy
+msgid "Fennoa API key. Can be stored as base64 or as plain text."
+msgstr "Fennoa API -avain. Voidaan tallentaa base64-muodossa tai tavallisena tekstinä."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, fuzzy, python-format
+msgid "Fennoa API test succeeded."
+msgstr "Fennoa API -testi onnistui."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_backend__client_identifier
+#, fuzzy
+msgid "Fennoa API user / client identifier"
+msgstr "Fennoa API:n käyttäjä/asiakastunniste"
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_fennoa_backend
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__backend_id
+#, fuzzy
+msgid "Fennoa Backend"
+msgstr "Fennoa Backend"
+
+#. module: connector_fennoa
+#: model:ir.actions.act_window,name:connector_fennoa.action_fennoa_backend
+#, fuzzy
+msgid "Fennoa Backends"
+msgstr "Fennoa-taustajärjestelmät"
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_fennoa_binding
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__fennoa_binding_id
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__fennoa_binding_id
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__fennoa_binding_id
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding_mixin__fennoa_binding_id
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__fennoa_binding_id
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_users__fennoa_binding_id
+msgid "Fennoa Binding"
+msgstr "Fennoa-sidos"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_binding_mixin.py:0
+#: model:ir.actions.act_window,name:connector_fennoa.action_fennoa_binding
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__fennoa_binding_ids
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__fennoa_binding_ids
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__fennoa_binding_ids
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding_mixin__fennoa_binding_ids
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__fennoa_binding_ids
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_users__fennoa_binding_ids
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_binding_search
+#, fuzzy, python-format
+msgid "Fennoa Bindings"
+msgstr "Fennoa-sidokset"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__external_id
+msgid "Fennoa ID"
+msgstr "Fennoa ID"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__fennoa_binding_count
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__fennoa_binding_count
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__fennoa_binding_count
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding_mixin__fennoa_binding_count
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__fennoa_binding_count
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_users__fennoa_binding_count
+#, fuzzy
+msgid "Fennoa Logs"
+msgstr "Fennoa Logs"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Fennoa Schedulers"
+msgstr "Fennoa-ajastukset"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_fiscal_position__fennoa_tax_class_id
+#, fuzzy
+msgid "Fennoa Tax Class"
+msgstr "Fennoa-veroluokka"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, fuzzy, python-format
+msgid "Fennoa base URL must start with http:// or https://."
+msgstr "Fennoan perus-URL-osoitteen täytyy alkaa http:// tai https://."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_account_payment_form
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_partner_form
+#, fuzzy
+msgid "Fennoa bindings"
+msgstr "Fennoa-sidokset"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__fennoa_delayed_send
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__fennoa_delayed_send
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__fennoa_delayed_send
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding_mixin__fennoa_delayed_send
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__fennoa_delayed_send
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_users__fennoa_delayed_send
+msgid "Fennoa delayed send"
+msgstr "Fennoa viivästetty lähetys"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_binding_mixin.py:0
+#, python-format
+msgid "Fennoa export not enabled for this record."
+msgstr "Fennoa-vienti ei ole käytössä tällä tietueella."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_binding__external_id
+#, fuzzy
+msgid "Fennoa record id"
+msgstr "Fennoa record id"
+
+#. module: connector_fennoa
+#: model:ir.actions.server,name:connector_fennoa.ir_cron_fennoa_payment_sync_ir_actions_server
+msgid "Fennoa: Fetch payment status"
+msgstr "Fennoa: Hae maksun tila"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Fennoa: import customer '[%(id)s] %(name)s'"
+msgstr "Fennoa: tuo asiakas '[%(id)s] %(name)s'"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Fennoa: import customers for '%(company)s'"
+msgstr "Fennoa: tuo asiakkaat '%(company)s':lle"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Fennoa: import payment [%(id)s] %(name)s"
+msgstr "Fennoa: tuo maksu [%(id)s] %(name)s"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Fennoa: import payments for '%(company)s'"
+msgstr "Fennoa: tuo maksut '%(company)s':lle"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Fennoa: send invoice %(name)s [Odoo ID: %(id)s]"
+msgstr "Fennoa: lähetä lasku %(name)s [Odoo ID: %(id)s]"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, python-format
+msgid "Fennoa: send payment for invoice %s to Fennoa"
+msgstr "Fennoa: lähetä laskun maksutapahtuma %s Fennoalle"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+#, fuzzy
+msgid "Fetch and update the invoice details from Fennoa"
+msgstr "Hae ja päivitä laskutiedot Fennoasta"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Fetched invoice number '%s' from Fennoa."
+msgstr "Hae laskunumero '%s' Fennoalta."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Fetched payment reference '%s' from Fennoa."
+msgstr "Hae maksuviite '%s' Fennoalta."
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_account_fiscal_position
+msgid "Fiscal Position"
+msgstr "Verokanta"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, python-format
+msgid "Fiscal position '%s' has no Fennoa tax class set. "
+msgstr "Verokannalla '%s' ei ole Fennoa-veroluokkaa. "
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__6
+msgid "Foreign sales, outside of EU (G)"
+msgstr "EU:n ulkopuolinen myynti (G)"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+msgid "Get invoice details"
+msgstr "Hae laskun tiedot"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__id
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__id
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__id
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__id
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__id
+msgid "ID"
+msgstr "ID"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Import"
+msgstr "Tuo"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__payments_from_date
+msgid "Import Payments From"
+msgstr "Tuo maksut alkaen"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__payments_to_date
+msgid "Import Payments To"
+msgstr "Tuo maksut päättyen"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Import customers"
+msgstr "Tuo asiakkaat"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid ""
+"Import or update all customers from Fennoa.\n"
+"                                        <br/>\n"
+"                                        Matching is done with customer code, business code, "
+"email, exact name.\n"
+"                                        <br/>\n"
+"                                        You can configure the behaviour of this button below."
+msgstr ""
+"Tuo tai päivitä kaikki asiakkaat Fennoasta.                                        <br/"
+">Vastaavuus tehdään asiakaskoodin, yrityskoodin, sähköpostin ja tarkan nimen "
+"perusteella.                                        <br/>Voit konfiguroida tämän painikkeen "
+"käyttäytymistä alla."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid ""
+"Import or update all products from Fennoa.\n"
+"                                        <br/>\n"
+"                                        Matching is done by internal code or exact name "
+"match.\n"
+"                                        <br/>\n"
+"                                        You can configure the behaviour of this button below."
+msgstr ""
+"Tuo tai päivitä kaikki Fennoan tuotteet.                                        <br/"
+">Yhdistäminen tehdään sisäisen koodin tai nimen avulla.                                        "
+"<br/>Voit konfiguroida tämän painikkeen käyttäytymistä alla."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Import payments"
+msgstr "Tuo maksut"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Import payments from Fennoa"
+msgstr "Tuo maksut Fennoasta"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Import settings"
+msgstr "Tuonnin asetukset"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Import started"
+msgstr "Tuonti aloitettu"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Importing customers in the background..."
+msgstr "Asiakkaita tuodaan taustalla..."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Importing payments in the background..."
+msgstr "Maksuja tuodaan taustalla..."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, python-format
+msgid "Invalid customer data from Fennoa: missing ID"
+msgstr "Virheellinen asiakasdata Fennoasta: puuttuva ID"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, fuzzy, python-format
+msgid "Invalid payment data received from Fennoa."
+msgstr "Fennoalta vastaanotettu virheellinen maksutieto."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, fuzzy, python-format
+msgid "Invalid value for %(field)s in Fennoa payment query: %(value)s"
+msgstr "Virheellinen arvo %(field)s Fennoa-maksukyselyssä: %(value)s"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice %s has no customer to send to Fennoa."
+msgstr "Laskulla %s ei ole asiakasta, jonka voisi lähettää Fennoalle."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice '%s' has already been exported to Fennoa."
+msgstr "Lasku '%s' on jo viety Fennoaan."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, python-format
+msgid "Invoice '%s' has no fiscal position set."
+msgstr "Laskulla '%s' ei ole asetettua verokantaa."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice approved in Fennoa."
+msgstr "Lasku hyväksytty Fennoassa."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice date and due date must be set before sending to Fennoa."
+msgstr "Laskun päivämäärä ja eräpäivä on asetettava ennen lähettämistä Fennoalle."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice line %s has multiple taxes. Fennoa only supports one tax per invoice line."
+msgstr "Laskurivillä %s on useita veroja. Fennoa tukee vain yhtä veroa per laskurivi."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Invoice settings"
+msgstr "Laskun asetukset"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice was sent to Fennoa"
+msgstr "Lasku lähetettiin Fennoalle"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, fuzzy, python-format
+msgid "Invoice(s) approved in Fennoa."
+msgstr "Lasku(t) hyväksytty Fennoassa."
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_account_move
+msgid "Journal Entry"
+msgstr "Päiväkirjan kirjaus"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__write_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__write_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__write_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__write_uid
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__write_uid
+msgid "Last Updated by"
+msgstr "Viimeksi päivittänyt"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__write_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__write_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_backend__write_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__write_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__write_date
+msgid "Last Updated on"
+msgstr "Viimeksi päivitetty"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__sync_date
+#, fuzzy
+msgid "Last synchronization date"
+msgstr "Viimeinen synkronointipäivä"
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_fennoa_binding_mixin
+msgid "Mixin for Fennoa Binding"
+msgstr "Mixin Fennoa-sidokseen"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, python-format
+msgid "Multiple partners found matching Fennoa customer '%s' during import."
+msgstr "Useita kontakteja löydetty Fennoa-asiakkasta '%s' tuotaessa."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__name
+msgid "Name"
+msgstr "Nimi"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, python-format
+msgid "Only customer invoices and credit notes can be sent to Fennoa."
+msgstr "Vain asiakaslaskut ja -hyvitykset voidaan lähettää Fennoalle."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_account_bank_statement_line__order_identifier
+#: model:ir.model.fields,help:connector_fennoa.field_account_move__order_identifier
+#: model:ir.model.fields,help:connector_fennoa.field_account_payment__order_identifier
+#, fuzzy
+msgid "Optional field for purchase order reference in Fennoa"
+msgstr "Valinnainen kenttä ostotilauksen viitteeksi Fennoassa"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__order_identifier
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__order_identifier
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__order_identifier
+msgid "Order Identifier"
+msgstr "Tilausnumero"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, fuzzy, python-format
+msgid "Payment %s sent to Fennoa"
+msgstr "Maksu %s lähetetty Fennoalle"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, fuzzy, python-format
+msgid "Payment '%s' has already been exported to Fennoa."
+msgstr "Maksu '%s' on jo viety Fennoaan."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, fuzzy, python-format
+msgid "Payment exported to Fennoa with ID %s."
+msgstr "Maksu vietiin Fennoaan tunnuksella %s."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, fuzzy, python-format
+msgid "Payment or Invoice ID missing in Fennoa payment data."
+msgstr "Maksun tai laskun tunnus puuttuu Fennoan maksutiedoista."
+
+#. module: connector_fennoa
+#: model:ir.model,name:connector_fennoa.model_account_payment
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Payments"
+msgstr "Maksut"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Please configure a Fennoa backend for company {}."
+msgstr "Ole hyvä ja konfiguroi Fennoa-taustajärjestelmä yritystä {} varten."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Products"
+msgstr "Tuotteet"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__res_model
+#, fuzzy
+msgid "Related Model"
+msgstr "Aiheeseen liittyvä malli"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding__res_id
+msgid "Related Record ID"
+msgstr "Liittyvän tietueen ID"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_payment.py:0
+#, python-format
+msgid "Related invoice with Fennoa ID %s not found in Odoo."
+msgstr "Liittyvää laskua Fennoa-ID:llä %s ei löydy Odoosta."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+#, fuzzy
+msgid "Sales invoices"
+msgstr "Myyntilaskut"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Schedulers"
+msgstr "Ajastukset"
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__5
+#, fuzzy
+msgid "Scrap metal sales (AE)"
+msgstr "Romumetallimyynti (AE)"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+#, fuzzy
+msgid "Send to Fennoa"
+msgstr "Lähetä Fennoaan"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_move_form_fennoa
+#, fuzzy
+msgid "Sending options"
+msgstr "Lähetysvaihtoehdot"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_bank_statement_line__fennoa_sent_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_move__fennoa_sent_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_account_payment__fennoa_sent_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_fennoa_binding_mixin__fennoa_sent_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_partner__fennoa_sent_date
+#: model:ir.model.fields,field_description:connector_fennoa.field_res_users__fennoa_sent_date
+msgid "Sent to Fennoa"
+msgstr "Lähetetty Fennoaan"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+msgid "Settings"
+msgstr "Asetukset"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_backend.py:0
+#, python-format
+msgid "Success"
+msgstr "Onnistui"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+#, fuzzy
+msgid "Test Fennoa authentication by fetching customer information"
+msgstr "Testaa Fennoa-tunnistautumista hakemalla asiakastiedot"
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_fennoa_backend_form
+#, fuzzy
+msgid "Test authentication"
+msgstr "Testin todennus"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_binding_mixin.py:0
+#, fuzzy, python-format
+msgid "The model '%s' does not implement '_fennoa_export_record' method."
+msgstr "Malli '%s' ei toteuta '_fennoa_export_record'-menetelmää."
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/fennoa_binding_mixin.py:0
+#, fuzzy, python-format
+msgid "The model '%s' does not implement '_fennoa_import_record' method."
+msgstr "Malli '%s' ei toteuta '_fennoa_import_record'-menetelmää."
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_account_bank_statement_line__fennoa_sent_date
+#: model:ir.model.fields,help:connector_fennoa.field_account_move__fennoa_sent_date
+#: model:ir.model.fields,help:connector_fennoa.field_account_payment__fennoa_sent_date
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_binding_mixin__fennoa_sent_date
+#: model:ir.model.fields,help:connector_fennoa.field_res_partner__fennoa_sent_date
+#: model:ir.model.fields,help:connector_fennoa.field_res_users__fennoa_sent_date
+msgid "Timestamp when this record was successfully sent to Fennoa."
+msgstr "Aikaleima, kun tämä tietue on lähetetty onnistuneesti Fennoaan."
+
+#. module: connector_fennoa
+#: model:ir.model.fields.selection,name:connector_fennoa.selection__account_fiscal_position__fennoa_tax_class_id__8
+#, fuzzy
+msgid "Triangulation (K)"
+msgstr "Triangulaatio (K)"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/account_move.py:0
+#, python-format
+msgid "Unsupported move type '%s' for Fennoa invoice type."
+msgstr "Tukematon laskun tyyppi '%s' Fennoa-laskutyypille."
+
+#. module: connector_fennoa
+#: model_terms:ir.ui.view,arch_db:connector_fennoa.view_partner_form
+msgid "Update from Fennoa"
+msgstr "Päivitä Fennoasta"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, python-format
+msgid "Updated partner data from Fennoa"
+msgstr "Päivitä kumppanin tiedot Fennoasta"
+
+#. module: connector_fennoa
+#. odoo-python
+#: code:addons/connector_fennoa/models/partner.py:0
+#, python-format
+msgid "Updated partner data to Fennoa"
+msgstr "Kumppanin tiedot päivitetty Fennoaan"
+
+#. module: connector_fennoa
+#: model:ir.model.fields,help:connector_fennoa.field_account_bank_statement_line__fennoa_delayed_send
+#: model:ir.model.fields,help:connector_fennoa.field_account_move__fennoa_delayed_send
+#: model:ir.model.fields,help:connector_fennoa.field_account_payment__fennoa_delayed_send
+#: model:ir.model.fields,help:connector_fennoa.field_fennoa_binding_mixin__fennoa_delayed_send
+#: model:ir.model.fields,help:connector_fennoa.field_res_partner__fennoa_delayed_send
+#: model:ir.model.fields,help:connector_fennoa.field_res_users__fennoa_delayed_send
+msgid ""
+"When enabled, records are sent to Fennoa as background jobs using the Odoo queue (with_delay)."
+msgstr "Kun valittuna, tietueet lähetetään Fennoalle tausta-ajona (viivästettynä)."

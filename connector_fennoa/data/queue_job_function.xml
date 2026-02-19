@@ -34,6 +34,7 @@
         <field name="model_id" ref="connector_fennoa.model_account_move" />
         <field name="method">action_fennoa_get_invoice_details</field>
         <field name="channel_id" ref="channel_fennoa" />
+        <field name="retry_pattern" eval="{1: 600, 5: 3600, 10: 86400}" />
     </record>
 
     <!-- Fennoa: Payments -->

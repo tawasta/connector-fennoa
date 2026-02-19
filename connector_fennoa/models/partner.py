@@ -112,7 +112,7 @@ class ResPartner(models.Model):
             "email": self.email or "",
             "phone": self.phone or "",
             "website": self.website or "",
-            "business_id": self.vat or "",
+            "business_id": self.company_registry or "",
             "account_type_id": 1 if self.is_company else 2,
             # TODO: contact person handling, this is incorrect
             # "contact_person": self.child_ids[:1].name if self.child_ids else "",
@@ -220,7 +220,7 @@ class ResPartner(models.Model):
             "country_id": country.id if country else False,
             "email": customer_data.get("email") or "",
             "phone": customer_data.get("phone") or "",
-            "vat": customer_data.get("business_id") or "",
+            "company_registry": customer_data.get("business_id") or "",
             "comment": customer_data.get("description") or "",
             "website": customer_data.get("website") or "",
             "ref": customer_data.get("customer_no") or "",
@@ -241,9 +241,22 @@ class ResPartner(models.Model):
 
         return res
 
-    def fennoa_api_update_customer(self, fennoa_id, payload):
+    def fennoa_api_update_customer(self, customer_no, payload):
         """Update existing customer in Fennoa using JSON."""
-        endpoint = f"/customer_api/{fennoa_id}"
+        if not customer_no:
+            raise ValidationError(_("Customer number is required for partner."))
+
+        if len(self.env["res.partner"].search([("ref", "=", customer_no)])) > 1:
+            raise UserError(
+                _(
+                    "Multiple partners found with the same reference "
+                    "'%s'. Cannot determine the correct "
+                    "Fennoa customer to update.",
+                    customer_no,
+                )
+            )
+
+        endpoint = f"/customer_api/{customer_no}"
         res = self._fennoa_api_request_make(
             "PUT",
             endpoint,

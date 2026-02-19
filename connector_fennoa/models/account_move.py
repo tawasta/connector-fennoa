@@ -5,6 +5,7 @@ from odoo.exceptions import UserError, ValidationError
 from odoo.tools import html2plaintext
 
 from odoo.addons.queue_job.delay import chain
+from odoo.addons.queue_job.exception import RetryableJobError
 
 _logger = logging.getLogger(__name__)
 
@@ -14,6 +15,10 @@ class AccountMove(models.Model):
     _inherit = ["account.move", "api.request.mixin", "fennoa.binding.mixin"]
 
     # region Fields
+    # TODO: use an existing field?
+    order_identifier = fields.Char(
+        help="Optional field for purchase order reference in Fennoa",
+    )
 
     # endregion
 
@@ -132,7 +137,7 @@ class AccountMove(models.Model):
         if delivery_method == "finvoice":
             einvoice_address = partner.edicode or False
             einvoice_operator = (
-                partner.einvoice_operator_id.name
+                partner.einvoice_operator_id.identifier
                 if partner.einvoice_operator_id
                 else False
             )
@@ -160,11 +165,14 @@ class AccountMove(models.Model):
             # Omitting payment reference will force Fennoa to calculate it
             # "banking_reference": self.payment_reference or "",
             "locale": self._get_fennoa_locale_code(),
+            # "Our reference" should be salesperson, but this should be behind a setting
             # "our_reference": self.invoice_user_id.name or "",
             "your_reference": self.ref or "",
-            "contact_person": self.invoice_user_id.name or "",
+            "order_identifier": self.order_identifier or "",
+            # The contact person should be THEIR contact person, "tilaaja"
+            # "contact_person": self.invoice_user_id.name or "",
             # "penal_interest": "" // TODO: inherit account_invoice_overdue_interest
-            "notes_before": html2plaintext(self.narration) or "",
+            "notes_before": html2plaintext(self.narration) if self.narration else "",
             "delivery_method": delivery_method,
             # TODO: internal notes
             # "notes_internal": self.description or "",
@@ -255,43 +263,61 @@ class AccountMove(models.Model):
 
     def action_fennoa_approve_invoice(self):
         """Approve invoice(s) in Fennoa."""
-        for record in self:
-            record.fennoa_api_approve_sales_invoice()
-            record.message_post(
-                body=_("Invoice approved in Fennoa."),
-                subtype_xmlid="mail.mt_note",
-            )
-        return _("Invoice(s) approved in Fennoa.")
+        self.ensure_one()
+        self.fennoa_api_approve_sales_invoice()
+        msg = _("Invoice approved in Fennoa.")
+        self.message_post(
+            body=msg,
+            subtype_xmlid="mail.mt_note",
+        )
+        return msg
+
+    def action_fennoa_send_invoice_to_customer(self):
+        """Send invoice(s) from Fennoa to the customer."""
+        self.ensure_one()
+        self.fennoa_api_send_sales_invoice(self.fennoa_binding_id.external_id)
+        msg = _("Invoice sent from Fennoa to the customer.")
+        self.message_post(
+            body=msg,
+            subtype_xmlid="mail.mt_note",
+        )
+        return msg
 
     def action_fennoa_get_invoice_details(self):
         """
         Fetch and update the invoice details from Fennoa
         """
-        for record in self:
-            fennoa_id = record.fennoa_binding_id.external_id
-            res = self.fennoa_api_get_sales_invoice(fennoa_id)
-            sale_invoice = res.get("SalesInvoice", {})
-            # TODO: create import mapper to handle more fields
-            invoice_no = sale_invoice.get("invoice_no")
-            payment_reference = sale_invoice.get("banking_reference")
+        self.ensure_one()
+        fennoa_id = self.fennoa_binding_id.external_id
+        res = self.fennoa_api_get_sales_invoice(fennoa_id)
+        sale_invoice = res.get("SalesInvoice", {})
+        # TODO: create import mapper to handle more fields
+        invoice_no = sale_invoice.get("invoice_no")
+        if not invoice_no:
+            raise RetryableJobError(
+                _("Fennoa did not return an invoice number for invoice ID %s.", self.id)
+            )
 
-            if invoice_no and invoice_no != record.name:
-                record.name = invoice_no  # Update the invoice number in Odoo
-                record.message_post(
-                    body=_("Fetched invoice number '%s' from Fennoa." % invoice_no),
-                    subtype_xmlid="mail.mt_note",
-                )
-            if payment_reference and payment_reference != record.payment_reference:
-                record.payment_reference = (
-                    payment_reference
-                )  # Update the payment reference in Odoo
-                record.message_post(
-                    body=_(
-                        "Fetched payment reference '%s' from Fennoa."
-                        % payment_reference
-                    ),
-                    subtype_xmlid="mail.mt_note",
-                )
+        payment_reference = sale_invoice.get("banking_reference")
+
+        if invoice_no and invoice_no != self.name:
+            self.name = invoice_no  # Update the invoice number in Odoo
+            self.message_post(
+                body=_("Fetched invoice number '%s' from Fennoa." % invoice_no),
+                subtype_xmlid="mail.mt_note",
+            )
+        if payment_reference and payment_reference != self.payment_reference:
+            self.payment_reference = (
+                payment_reference
+            )  # Update the payment reference in Odoo
+            self.message_post(
+                body=_(
+                    "Fetched payment reference '%s' from Fennoa." % payment_reference
+                ),
+                subtype_xmlid="mail.mt_note",
+            )
+
+        return _("Fetched invoice details from Fennoa.")
 
     # endregion
 
@@ -376,20 +402,26 @@ class AccountMove(models.Model):
             subtype_xmlid="mail.mt_note",
         )
 
+        backend = self._get_fennoa_backend()
         delayables = []
-
-        job_desc = f"Fennoa: approve invoice ID {self.id}"
-        delayables.append(
-            self.delayable(description=job_desc).action_fennoa_approve_invoice()
-        )
+        if backend.sale_invoice_auto_approve:
+            job_desc = f"Fennoa: approve invoice ID {self.id}"
+            delayables.append(
+                self.delayable(description=job_desc).action_fennoa_approve_invoice()
+            )
 
         job_desc = f"Fennoa: fetch invoice details for invoice ID {self.id}"
         delayables.append(
             self.delayable(description=job_desc).action_fennoa_get_invoice_details()
         )
 
-        # TODO: auto-send (add to connector config)
-        # job_send_to_customer = self.delayable().action_fennoa_send_invoice()
+        if backend.sale_invoice_auto_approve and backend.sale_invoice_auto_send:
+            job_desc = f"Fennoa: send invoice ID {self.id} to customer"
+            delayables.append(
+                self.delayable(
+                    description=job_desc
+                ).action_fennoa_send_invoice_to_customer()
+            )
 
         chain(*delayables).delay()
 
