@@ -222,7 +222,9 @@ class AccountMove(models.Model):
             if product_id and product_id.default_code:
                 payload[f"row[{i}][product_no]"] = product_id.default_code
             payload[f"row[{i}][name]"] = product_id.name if product_id else ""
-            payload[f"row[{i}][description]"] = line.name or ""
+            payload[f"row[{i}][description]"] = (
+                "" if (line.name or "").strip() == "-" else (line.name or "")
+            )
             payload[f"row[{i}][price]"] = str(price)
             payload[f"row[{i}][quantity]"] = str(qty)
             payload[f"row[{i}][unit]"] = (
