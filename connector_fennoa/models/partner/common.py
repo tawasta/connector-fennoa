@@ -10,44 +10,6 @@ class ResPartner(models.Model):
     _name = "res.partner"
     _inherit = ["res.partner", "api.request.mixin", "fennoa.binding.mixin"]
 
-    def get_combined_street(self):
-        """
-        Get combined string for street and street2
-        :return: String with streets
-        """
-        if not self:
-            # If function is called without records
-            return ""
-
-        self.ensure_one()
-        if self.street and self.street2:
-            street = f"{self.street} {self.street2}"
-        else:
-            street = self.street or ""
-
-        return street
-
-    # TODO: use exporter instead of raw payload
-    @api.model
-    def _fennoa_build_customer_payload(self):
-        """
-        Create FORM DATA payload structure to send partner as a customer to Fennoa.
-        """
-
-        self.ensure_one()
-
-        # TODO: separate validation method (for extendability)
-        if not self.name:
-            raise UserError(_("Cannot create customer in Fennoa without a name."))
-
-        if not self.country_id or not self.country_id.code:
-            raise UserError(
-                _("Cannot create customer in Fennoa without country (ISO code).")
-            )
-
-        payload = self.fennoa_export_mapper()
-        return payload
-
     @api.model
     def _fennoa_export_record(self):
         """
@@ -56,14 +18,18 @@ class ResPartner(models.Model):
         """
         self.ensure_one()
 
+        if not self.fennoa_export:
+            return _("Exporting to Fennoa is disabled for this partner.")
+
         backend = (
             self.env["fennoa.backend"]
             .sudo()
             .get_backend(company=self.company_id or self.env.company)
         )
 
-        # TODO: use exporter
-        payload = self._fennoa_build_customer_payload()
+        with backend.work_on(self._name) as work:
+            mapper = work.component(usage="export.mapper")
+            payload = mapper.map_record(self).values()
 
         binding = self.fennoa_binding_id
         if not binding and self.ref:
@@ -92,33 +58,6 @@ class ResPartner(models.Model):
             self.fennoa_sent_date = fields.Datetime.now()
             self.message_post(body=_("Exported partner to Fennoa"))
         return result
-
-    def fennoa_export_mapper(self) -> dict:
-        """
-        Map Odoo partner fields to Fennoa customer fields for export.
-        :return: dict with mapped Fennoa customer fields
-        """
-        # TODO: use actual export mapper
-        self.ensure_one()
-        vals = {
-            # If empty, Fennoa will generate a customer number
-            "customer_no": self.ref or "",
-            "name": self.name,
-            "address": self.get_combined_street(),
-            "postalcode": self.zip or "",
-            "city": self.city or "",
-            "country_id": self.country_id.code or "",
-            "description": self.comment or "",
-            "email": self.email or "",
-            "phone": self.phone or "",
-            "website": self.website or "",
-            "business_id": self.company_registry or "",
-            "account_type_id": 1 if self.is_company else 2,
-            # TODO: contact person handling, this is incorrect
-            # "contact_person": self.child_ids[:1].name if self.child_ids else "",
-        }
-
-        return vals
 
     def _fennoa_import_record(self, fennoa_id=False):
         """
@@ -174,7 +113,9 @@ class ResPartner(models.Model):
                     % customer_data.get("customer_no")
                 )
 
-        vals = self.fennoa_import_mapper(customer_data)
+        with backend.work_on(self._name) as work:
+            mapper = work.component(usage="import.mapper")
+            vals = mapper.map_record(customer_data).values()
 
         if existing_partner:
             existing_partner.write(vals)
@@ -198,39 +139,10 @@ class ResPartner(models.Model):
             f"into Odoo with ID '{existing_partner.id}'"
         )
 
-    def fennoa_import_mapper(self, customer_data) -> dict:
-        """
-        Map customer data from Fennoa to Odoo partner fields.
-        :param customer_data: dict with customer data from Fennoa API
-        :return: dict with mapped Odoo partner fields
-        """
-        country_code = customer_data.get("country_id") or ""
-        country = False
-        if country_code:
-            country = self.env["res.country"].search(
-                [("code", "=", country_code)], limit=1
-            )
-
-        # TODO: use actual import mapper
-        vals = {
-            "name": customer_data.get("name") or "",
-            "street": customer_data.get("address") or "",
-            "zip": customer_data.get("postalcode") or "",
-            "city": customer_data.get("city") or "",
-            "country_id": country.id if country else False,
-            "email": customer_data.get("email") or "",
-            "phone": customer_data.get("phone") or "",
-            "company_registry": customer_data.get("business_id") or "",
-            "comment": customer_data.get("description") or "",
-            "website": customer_data.get("website") or "",
-            "ref": customer_data.get("customer_no") or "",
-            "company_id": self.company_id.id,
-        }
-
-        return vals
-
     def fennoa_api_create_customer(self, customer_data, partner=None):
-        """Create a new customer in Fennoa using FORM DATA."""
+        """
+        Create a new customer to Fennoa
+        """
         res = self._fennoa_api_request_make(
             "POST",
             "/customer_api/add",
@@ -242,7 +154,9 @@ class ResPartner(models.Model):
         return res
 
     def fennoa_api_update_customer(self, customer_no, payload):
-        """Update existing customer in Fennoa using JSON."""
+        """
+        Update existing customer in Fennoa
+        """
         if not customer_no:
             raise ValidationError(_("Customer number is required for partner."))
 
@@ -266,7 +180,11 @@ class ResPartner(models.Model):
         return res
 
     def fennoa_api_get_customer_by_id(self, customer_id) -> dict:
-        """Fetch customer details by Fennoa internal ID."""
+        """
+        Fetch customer details by Fennoa internal ID.
+         :param customer_id: Fennoa internal ID
+         :return: Customer data as dict
+        """
         endpoint = f"/customer_api/{customer_id}"
         try:
             res = self._fennoa_api_request_make("GET", endpoint).get("Customer") or {}
@@ -277,7 +195,11 @@ class ResPartner(models.Model):
         return res
 
     def fennoa_api_get_customer_by_number(self, customer_no) -> dict:
-        """Fetch customer by external customer number."""
+        """
+        Fetch customer by external customer number.
+         :param customer_no: External customer number
+         :return: Customer data as dict
+        """
         endpoint = f"/customer_api/get/customer_no/{customer_no}"
         try:
             res = self._fennoa_api_request_make("GET", endpoint).get("Customer") or {}
