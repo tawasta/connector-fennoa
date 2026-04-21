@@ -1,4 +1,5 @@
 - Additional Fennoa API endpoints (e.g. purchase invoices) are not yet covered.
 - More transparency to users (about what happend between Odoo and Fennoa)
 - Less redundant functionality
+- Support new API (coming at the end of 2026)
 - Add tests

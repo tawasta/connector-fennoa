@@ -21,15 +21,8 @@ class ResPartner(models.Model):
         if not self.fennoa_export:
             return _("Exporting to Fennoa is disabled for this partner.")
 
-        backend = (
-            self.env["fennoa.backend"]
-            .sudo()
-            .get_backend(company=self.company_id or self.env.company)
-        )
-
-        with backend.work_on(self._name) as work:
-            mapper = work.component(usage="export.mapper")
-            payload = mapper.map_record(self).values()
+        backend = self._get_fennoa_backend()
+        payload = self.fennoa_get_export_payload()
 
         binding = self.fennoa_binding_id
         if not binding and self.ref:
@@ -59,6 +52,15 @@ class ResPartner(models.Model):
             self.message_post(body=_("Exported partner to Fennoa"))
         return result
 
+    def fennoa_get_export_payload(self):
+        backend = self._get_fennoa_backend()
+
+        with backend.work_on(self._name) as work:
+            mapper = work.component(usage="export.mapper")
+            payload = mapper.map_record(self).values()
+
+        return payload
+
     def _fennoa_import_record(self, fennoa_id=False):
         """
         Import customer data from Fennoa into Odoo as a partner.
@@ -81,11 +83,7 @@ class ResPartner(models.Model):
         if not customer_data.get("id"):
             raise ValidationError(_("Invalid customer data from Fennoa: missing ID"))
 
-        backend = (
-            self.env["fennoa.backend"]
-            .sudo()
-            .get_backend(company=self.company_id or self.env.company)
-        )
+        backend = self._get_fennoa_backend()
 
         if len(self) == 1:
             existing_partner = self

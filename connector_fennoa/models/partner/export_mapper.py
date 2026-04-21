@@ -8,7 +8,7 @@ from odoo.addons.connector.components.mapper import changed_by, mapping
 class FennoaPartnerExportMapper(Component):
     _name = "fennoa.partner.export.mapper"
     _description = "Fennoa Partner Export Mapper"
-    _inherit = "base.export.mapper"
+    _inherit = "fennoa.export.mapper"
     _usage = "export.mapper"
     _apply_on = ["res.partner"]
 
@@ -59,6 +59,11 @@ class FennoaPartnerExportMapper(Component):
     def company_registry(self, record):
         return self._direct_mapping(record.company_registry, "business_id")
 
+    @changed_by("vat")
+    @mapping
+    def vat(self, record):
+        return self._direct_mapping(record.vat, "vat_number")
+
     @changed_by("ref")
     @mapping
     def customer_no(self, record):
@@ -100,34 +105,35 @@ class FennoaPartnerExportMapper(Component):
     def account_type_id(self, record):
         return {"account_type_id": 1 if record.is_company else 2}
 
-    # endregion
+    @mapping
+    @changed_by("lang")
+    def locale(self, record):
+        return {"locale_id": self._get_fennoa_locale_code(record)}
 
-    # region Helpers
-    def _direct_mapping(self, source, target) -> dict:
-        """
-        Helper for direct mappings to prevent code repetition
-        :param source: value to be mapped if it exists
-        :param target: target field in Fennoa
-        :return: dict with target field and source value if source exists
-        """
+    @mapping
+    @changed_by("edicode", "einvoice_operator_id")
+    def einvoice_information(self, record):
         res = {}
-        if source:
-            res[target] = source
+
+        delivery_method = self._get_fennoa_delivery_method(record)
+
+        if delivery_method == "email":
+            # If delivery method is "email", it goes to einvoice_address
+            res["einvoice_address"] = record.email
+            res["einvoice_operator_id"] = ""
+        elif delivery_method == "finvoice":
+            res["einvoice_address"] = record.edicode
+            res["einvoice_operator_id"] = record.einvoice_operator_id.identifier
 
         return res
 
-    def _get_combined_street(self, record) -> str:
-        """
-        Get combined string for street and street2
-        :param record: res.partner record
-        :return: String with streets
-        """
-        record.ensure_one()
-        if record.street and record.street2:
-            street = f"{record.street} {record.street2}"
-        else:
-            street = record.street or ""
+    @mapping
+    @changed_by("customer_invoice_transmit_method")
+    def sales_invoice_delivery_method(self, record):
+        res = {}
+        delivery_method = self._get_fennoa_delivery_method(record)
+        res["sales_invoice_delivery_method"] = delivery_method
 
-        return street
+        return res
 
     # endregion

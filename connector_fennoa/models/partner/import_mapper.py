@@ -13,7 +13,6 @@ class FennoaPartnerImportMapper(Component):
     # Fennoa, Odoo
     direct = [
         ("name", "name"),
-        ("address", "street"),
         ("postalcode", "zip"),
         ("city", "city"),
         ("email", "email"),
@@ -27,7 +26,7 @@ class FennoaPartnerImportMapper(Component):
     @mapping
     def country_id(self, record):
         res = {}
-        country_code = record.get("country_id") or ""
+        country_code = record.get("country_id", "")
         if country_code:
             country = self.env["res.country"].search(
                 [("code", "=", country_code)], limit=1
@@ -37,3 +36,11 @@ class FennoaPartnerImportMapper(Component):
                 res["country_id"] = country.id
 
         return res
+
+    @mapping
+    def address(self, record):
+        address = record.get("address", "")
+        # TODO: Fennoa only has one address field, but Odoo has street and street 2.
+        # Address should be split into street and street2 when necessary
+        if address:
+            return {"street": address}
