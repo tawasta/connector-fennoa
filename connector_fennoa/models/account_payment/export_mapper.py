@@ -12,7 +12,7 @@ class FennoaPaymentExportMapper(Component):
     # region Mappings
     # Odoo, Fennoa
     direct = [
-        ("amount, sum"),
+        ("amount", "sum"),
     ]
 
     @mapping

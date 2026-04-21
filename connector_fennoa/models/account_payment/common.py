@@ -112,11 +112,9 @@ class AccountPayment(models.Model):
         self.ensure_one()
 
         if self.fennoa_binding_id:
-            raise ValidationError(
-                _(
-                    "Payment '%s' has already been exported to Fennoa.",
-                    self.display_name,
-                )
+            return _(
+                "Payment '%s' has already been exported to Fennoa.",
+                self.display_name,
             )
 
         backend = self._get_fennoa_backend()
