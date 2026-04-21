@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 
-from odoo import models
+from odoo import _, models
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -11,8 +11,8 @@ _logger = logging.getLogger(__name__)
 class ApiRequestMixin(models.Model):
     _inherit = "api.request.mixin"
 
-    def _get_fennoa_backend(self):
-        company = self.company_id or self.env.company
+    def _get_fennoa_backend(self, company=None):
+        company = company or self.company_id or self.env.company
 
         backend = (
             self.env["fennoa.backend"]
@@ -68,8 +68,17 @@ class ApiRequestMixin(models.Model):
                     if isinstance(value, list):
                         # Error list seem to have duplicate errors some times
                         value = list(set(value))
-                    errors = ", ".join(value) if isinstance(value, list) else value
-                    messages.append(f"{key}: {errors}")
+
+                        # Error list may contain just "None"
+                        if all(v is None for v in value):
+                            value = [_("Unknown error")]
+
+                        # Join multiple errors for the same field into one string
+                        error_string = ", ".join(value)
+                    else:
+                        error_string = str(value)
+
+                    messages.append(f"{key}: {error_string}")
                 error_msg = "\n".join(messages)
             elif isinstance(errors, list):
                 for err in errors:

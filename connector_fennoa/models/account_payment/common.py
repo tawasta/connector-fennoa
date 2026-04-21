@@ -39,7 +39,7 @@ class AccountPayment(models.Model):
             ],
         )
         if payment_binding:
-            return "Payment already imported."
+            return _("Payment is already imported.")
 
         move_binding = Binding.search(
             [
@@ -52,15 +52,16 @@ class AccountPayment(models.Model):
         if move_binding:
             move = self.env["account.move"].browse(move_binding.res_id)
             if move.payment_state == "paid":
-                return f"Related invoice '{move.name}' is already paid."
+                return _("Related invoice '%s' is already paid.", move.name)
             elif move.payment_state == "reversed":
-                return f"Related invoice '{move.name}' is already reconciled."
+                return _("Related invoice '%s' is already reconciled.", move.name)
 
             ctx = {
                 "active_model": "account.move",
                 "active_ids": [move_binding.res_id],
             }
 
+            # TODO: use import mapper
             wizard = (
                 self.env["account.payment.register"]
                 .with_context(**ctx)
@@ -104,27 +105,6 @@ class AccountPayment(models.Model):
                 fennoa_invoice_id,
             )
 
-    def fennoa_export_mapper(self):
-        """
-        Map Odoo payment fields to Fennoa payment fields
-        """
-        if len(self.reconciled_invoice_ids) == 1:
-            invoice_number = self.reconciled_invoice_ids.name or ""
-        else:
-            # TODO: this invoice number mapping is hacky and should be improved
-            invoice_number = self.ref and self.ref.strip("/INV") or ""
-
-        vals = {
-            "invoice_no": invoice_number,
-            "payment_date": self.date.strftime("%Y-%m-%d"),
-            "sum": self.amount,
-            # TODO: Map payment method
-            "payment_type": 2,
-            "is_factoring": 0,
-            "description": self.ref or "",
-        }
-        return vals
-
     def _fennoa_export_record(self):
         """
         Export payment to Fennoa
@@ -132,14 +112,20 @@ class AccountPayment(models.Model):
         self.ensure_one()
 
         if self.fennoa_binding_id:
-            msg = _(
-                "Payment '%s' has already been exported to Fennoa.",
-                self.display_name,
+            raise ValidationError(
+                _(
+                    "Payment '%s' has already been exported to Fennoa.",
+                    self.display_name,
+                )
             )
-            return msg
 
-        payload = self.fennoa_export_mapper()
+        backend = self._get_fennoa_backend()
+        with backend.work_on(self._name) as work:
+            mapper = work.component(usage="export.mapper")
+            payload = mapper.map_record(self).values()
+
         result = self.fennoa_api_create_payment(payload)
+
         self.fennoa_sent_date = fields.Datetime.now()
         self.message_post(body=_("Exported payment to Fennoa"))
         for invoice in self.reconciled_invoice_ids:
@@ -150,7 +136,7 @@ class AccountPayment(models.Model):
 
     def fennoa_api_create_payment(self, payload):
         """
-        Create a new payment in Fennoa using
+        Create a new payment in Fennoa
         """
         res = self._fennoa_api_request_make(
             "POST",
