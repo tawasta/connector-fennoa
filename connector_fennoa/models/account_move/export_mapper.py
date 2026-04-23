@@ -217,10 +217,13 @@ class FennoaInvoiceExportMapper(Component):
                 qty = -abs(qty)
                 price = abs(price)
 
-            product_id = line.product_id
+            product_id = line.product_id.with_context(
+                lang=record.partner_id.lang or self.env.user.lang
+            )
 
             if product_id and product_id.default_code:
                 res[f"row[{i}][product_no]"] = product_id.default_code
+
             res[f"row[{i}][name]"] = product_id.name if product_id else ""
             res[f"row[{i}][description]"] = (
                 "" if (line.name or "").strip() == "-" else (line.name or "")
