@@ -1,3 +1,7 @@
+17.0.1.2.1 (2026-04-23)
+
+Use invoice customer language for product name
+
 17.0.1.2.0 (2026-03-21)
 
 Add import/export mappers
