@@ -10,6 +10,6 @@ Available addons
 ----------------
 addon | version | maintainers | summary
 --- | --- | --- | ---
-[connector_fennoa](connector_fennoa/) | 17.0.1.2.0 |  | Integrate Odoo to Fennoa
+[connector_fennoa](connector_fennoa/) | 17.0.1.2.1 |  | Integrate Odoo to Fennoa
 
 [//]: # (end addons)
