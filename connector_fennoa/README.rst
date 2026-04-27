@@ -61,27 +61,49 @@ Fennoa
 ------
 
 1. Go to *Fennoa* https://app.fennoa.com/ with your admin user
+
 2. Go to *Fennoa > Users (Käyttäjät)*
-3. Create a new *API user* (*API-käyttäjä*) |image1|
+
+3. Create a new *API user* (*API-käyttäjä*)
+
+   |image1|
+
 4. Select **General API user** (*Yleinen API-käyttäjä*), or **Odoo
-   (Futural)** |image2|
+   (Futural)**
+
+   |image2|
+
 5. Give an user name (e.g. *Futural Odoo*), and necessary permissions.
-   Click *Create API user* (*Luo API-käyttäjä*) |image3|
+   Click *Create API user* (*Luo API-käyttäjä*)
+
+   |image3|
+
 6. Copy your *API-user* (*API-käyttäjä*) and *API-key* (*API-avain*) to
-   a safe place |image4|
+   a safe place
+
+   |image4|
 
 Odoo
 ----
 
 1. Make sure the OCA `Job Queue <https://github.com/OCA/queue>`__
    framework is available and configured correctly.
+
 2. Go to *Connectors > Fennoa*.
+
 3. Create a backend for your company (or companies). Use the *API-user*
-   and *API-key* from Fennoa API User |image5|
+   and *API-key* from Fennoa API User
+
+   |image5|
+
 4. Press **Test Connection** to validate credentials. You should see a
-   success-message |image6|
+   success-message
+
+   |image6|
+
 5. (Optional) Click **Import Customers** to fetch customer master data
    from Fennoa.
+
 6. (Optional) Configure/disable Schedulers by clicking **Scheduled
    Actions**-button
 
