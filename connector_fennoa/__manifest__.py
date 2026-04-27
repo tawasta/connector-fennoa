@@ -27,6 +27,7 @@
     "license": "AGPL-3",
     "application": True,
     "installable": True,
+    "images": ["static/description/banner.png"],
     "depends": [
         "account",
         "account_invoice_transmit_method",
