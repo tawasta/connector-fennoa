@@ -1,3 +1,7 @@
+17.0.1.2.2 (2026-05-12)
+
+Remove customer reference requirement
+
 17.0.1.2.1 (2026-04-23)
 
 Use invoice customer language for product name
