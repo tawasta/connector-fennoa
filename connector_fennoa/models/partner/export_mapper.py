@@ -67,11 +67,11 @@ class FennoaPartnerExportMapper(Component):
     @changed_by("ref")
     @mapping
     def customer_no(self, record):
-        if not record.ref:
-            raise UserError(_("Can't export without a customer reference."))
-
         # Check if there are multiple partners with the same reference
-        if len(self.env["res.partner"].search([("ref", "=", record.ref)])) > 1:
+        if (
+            record.ref
+            and len(self.env["res.partner"].search([("ref", "=", record.ref)])) > 1
+        ):
             raise UserError(
                 _(
                     "Multiple partners found with the same reference "
