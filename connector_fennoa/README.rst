@@ -166,6 +166,10 @@ Known issues / Roadmap
 Changelog
 =========
 
+17.0.1.2.3 (2026-05-18)
+
+Don't check for duplicate reference, if there is no reference set
+
 17.0.1.2.2 (2026-05-12)
 
 Remove customer reference requirement

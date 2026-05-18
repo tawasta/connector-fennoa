@@ -68,7 +68,10 @@ class FennoaPartnerExportMapper(Component):
     @mapping
     def customer_no(self, record):
         # Check if there are multiple partners with the same reference
-        if len(self.env["res.partner"].search([("ref", "=", record.ref)])) > 1:
+        if (
+            record.ref
+            and len(self.env["res.partner"].search([("ref", "=", record.ref)])) > 1
+        ):
             raise UserError(
                 _(
                     "Multiple partners found with the same reference "
