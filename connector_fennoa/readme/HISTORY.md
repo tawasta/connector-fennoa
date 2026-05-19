@@ -1,3 +1,7 @@
+17.0.1.2.4 (2026-05-19)
+
+Update partner reference from Fennoa, when creating a new partner
+
 17.0.1.2.3 (2026-05-18)
 
 Don't check for duplicate reference, if there is no reference set
