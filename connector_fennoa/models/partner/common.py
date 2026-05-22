@@ -48,7 +48,11 @@ class ResPartner(models.Model):
         else:
             # Create new partner
             result = self.fennoa_api_create_customer(payload, partner=self)
-            self.fennoa_sent_date = fields.Datetime.now()
+            partner_vals = {"fennoa_sent_date": fields.Datetime.now()}
+            if not self.ref:
+                # Update partner ref from Fennoa
+                partner_vals["ref"] = result.get("Customer", {}).get("customer_no")
+            self.write(partner_vals)
             self.message_post(body=_("Exported partner to Fennoa"))
         return result
 

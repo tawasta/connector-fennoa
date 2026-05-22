@@ -81,7 +81,12 @@ class FennoaPartnerExportMapper(Component):
                 )
             )
 
-        return {"customer_no": record.ref}
+        res = {}
+
+        if record.ref:
+            res["customer_no"] = record.ref
+
+        return res
 
     @changed_by("street", "street2")
     @mapping
