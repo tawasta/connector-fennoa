@@ -166,6 +166,9 @@ Known issues / Roadmap
 Changelog
 =========
 
+17.0.1.2.5 (2026-05-22) Use correct order identifier Try to get invoice
+details longer before raising an error
+
 17.0.1.2.4 (2026-05-19)
 
 Update partner reference from Fennoa, when creating a new partner

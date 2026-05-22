@@ -153,11 +153,11 @@ class FennoaInvoiceExportMapper(Component):
         return res
 
     @mapping
-    @changed_by("name")
+    @changed_by("order_identifier")
     def order_identifier(self, record):
         res = {}
-        if record.name:
-            res["order_identifier"] = record.name
+        if record.record.name:
+            res["order_identifier"] = record.order_identifier
 
         return res
 
