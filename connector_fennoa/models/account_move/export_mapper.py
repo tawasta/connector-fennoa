@@ -31,6 +31,15 @@ class FennoaInvoiceExportMapper(Component):
                 _("Customer must have a country (ISO code) to send invoice to Fennoa.")
             )
 
+        if record.transmit_method_id != partner.customer_invoice_transmit_method_id:
+            raise ValidationError(
+                _(
+                    "Customer and invoice transmission methods do not match. \n"
+                    "Please update the customer or invoice transmission method. \n"
+                    "\nInvoice-specific transmission method is not yet supported."
+                )
+            )
+
         # Use partner mapper for partner values
         vals = partner.fennoa_get_export_payload()
 
@@ -156,7 +165,7 @@ class FennoaInvoiceExportMapper(Component):
     @changed_by("order_identifier")
     def order_identifier(self, record):
         res = {}
-        if record.record.name:
+        if record.order_identifier:
             res["order_identifier"] = record.order_identifier
 
         return res

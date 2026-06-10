@@ -124,9 +124,20 @@ class FennoaPartnerExportMapper(Component):
 
         if delivery_method == "email":
             # If delivery method is "email", it goes to einvoice_address
+            if not record.email:
+                raise UserError(
+                    _("Email address is required when delivery method is 'email'.")
+                )
             res["einvoice_address"] = record.email
-            res["einvoice_operator_id"] = ""
+            # res["einvoice_operator_id"] = ""
         elif delivery_method == "finvoice":
+            if not record.edicode or not record.einvoice_operator_id:
+                raise UserError(
+                    _(
+                        "Edicode and eInvoice operator are required "
+                        "when delivery method is eInvoice."
+                    )
+                )
             res["einvoice_address"] = record.edicode
             res["einvoice_operator_id"] = record.einvoice_operator_id.identifier
 

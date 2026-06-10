@@ -83,6 +83,8 @@ class ApiRequestMixin(models.Model):
             elif isinstance(errors, list):
                 for err in errors:
                     messages.append(str(err))
+            elif isinstance(errors, str):
+                messages.append(errors)
 
             error_msg = "\n".join(messages)
         else:
