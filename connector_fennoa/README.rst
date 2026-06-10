@@ -166,7 +166,10 @@ Known issues / Roadmap
 Changelog
 =========
 
-17.0.1.2.5 (2026-05-26) Fix a bug in order identifier mapping
+17.0.1.2.7 (2026-06-10) Improve error handling and transmit method data
+validation
+
+17.0.1.2.6 (2026-05-26) Fix a bug in order identifier mapping
 
 17.0.1.2.5 (2026-05-22) Use correct order identifier Try to get invoice
 details longer before raising an error

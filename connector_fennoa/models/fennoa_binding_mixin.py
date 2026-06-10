@@ -83,7 +83,12 @@ class FennoaBindingMixin(models.AbstractModel):
 
         for record in self:
             if not record.fennoa_export:
-                raise UserError(_("Fennoa export not enabled for this record."))
+                if hasattr(record, "name"):
+                    name = record.name
+                else:
+                    name = "this record"
+
+                raise UserError(_("Fennoa export not enabled for '%s'.", name))
 
             record._fennoa_export_record()
         return True
