@@ -134,7 +134,7 @@ class ResPartner(models.Model):
 
             Binding.create(binding_vals)
 
-        existing_partner.message_post(body=_("Updated partner data from Fennoa"))
+        existing_partner.message_post(body=_("Updated data from Fennoa"))
 
         return (
             f"Imported Fennoa customer ID '{fennoa_id}' "

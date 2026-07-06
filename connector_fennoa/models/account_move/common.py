@@ -1,7 +1,7 @@
 import logging
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 from odoo.addons.queue_job.delay import chain
 from odoo.addons.queue_job.exception import RetryableJobError
@@ -91,16 +91,15 @@ class AccountMove(models.Model):
         """
         self.ensure_one()
         fennoa_id = self.fennoa_binding_id.external_id
-        res = self.fennoa_api_get_sales_invoice(fennoa_id)
-        sale_invoice = res.get("SalesInvoice", {})
-        # TODO: create import mapper to handle more fields
-        invoice_no = sale_invoice.get("invoice_no")
+        fennoa_invoice = self.fennoa_api_get_invoice(fennoa_id)
+        invoice_no = fennoa_invoice.get("invoice_no")
+
         if not invoice_no:
             raise RetryableJobError(
                 _("Fennoa did not return an invoice number for invoice %s.", fennoa_id)
             )
 
-        payment_reference = sale_invoice.get("banking_reference")
+        payment_reference = fennoa_invoice.get("banking_reference")
 
         if invoice_no and invoice_no != self.name:
             self.name = invoice_no  # Update the invoice number in Odoo
@@ -230,6 +229,71 @@ class AccountMove(models.Model):
 
         chain(*delayables).delay()
 
+    def _fennoa_import_record(self, fennoa_id, invoice_type=None):
+        """
+        Import invoice from Fennoa
+        """
+        res = self.fennoa_api_get_invoice(fennoa_id, invoice_type)
+        backend = self._get_fennoa_backend()
+
+        invoice_number = res.get("invoice_number")
+        fennoa_id = res.get("id")
+
+        # Try to find an existing binding
+        existing_binding = (
+            self.env["fennoa.binding"]
+            .sudo()
+            .search(
+                [
+                    ("backend_id", "=", backend.id),
+                    ("res_model", "=", self._name),
+                    ("external_id", "=", fennoa_id),
+                ],
+            )
+        )
+        if existing_binding:
+            return _(
+                "Invoice with Fennoa ID '%(fennoa_id)s' "
+                "already exists in Odoo with ID '%(odoo_id)s'"
+            ) % {
+                "fennoa_id": fennoa_id,
+                "odoo_id": existing_binding.res_id,
+            }
+
+        # Try to find an existing invoice by invoice number
+        existing_invoice = self.search([("name", "=", invoice_number)], limit=1)
+        if existing_invoice:
+            return _(
+                "Invoice with number '%(invoice_number)s' "
+                "already exists in Odoo with ID '%(odoo_id)s'"
+            ) % {
+                "invoice_number": invoice_number,
+                "odoo_id": existing_invoice.id,
+            }
+
+        with backend.work_on(self._name) as work:
+            mapper = work.component(usage="import.mapper")
+            vals = mapper.map_record(res).values()
+
+        invoice = self.create(vals)
+
+        if not invoice.fennoa_binding_id:
+            binding_vals = {
+                "backend_id": backend.id,
+                "res_model": self._name,
+                "external_id": fennoa_id,
+                "res_id": invoice.id,
+            }
+
+            self.env["fennoa.binding"].sudo().create(binding_vals)
+
+        invoice.message_post(body=_("Imported data from Fennoa"))
+
+        return (
+            f"Imported Fennoa invoice '{fennoa_id}' "
+            f"into Odoo with ID '{invoice.id}'"
+        )
+
     # endregion
 
     # region Fennoa API methods
@@ -268,15 +332,47 @@ class AccountMove(models.Model):
 
         return res
 
-    def fennoa_api_get_sales_invoice(self, fennoa_id):
-        """Get sales invoice details from Fennoa by its ID."""
+    def fennoa_api_get_invoice(self, fennoa_id, invoice_type=None):
+        """
+        Get invoice details from Fennoa by its ID.
+        fennoa_id: The ID of the invoice in Fennoa.
+        invoice_type: Optional, can be "sale" or "purchase"
+        """
+        if invoice_type not in (None, "sale", "purchase"):
+            raise ValidationError(
+                _(
+                    "Invalid invoice_type '%s'. "
+                    "Must be 'sale' or 'purchase' if provided."
+                ),
+                invoice_type,
+            )
+
+        if invoice_type == "sale" or self.is_sale_document():
+            is_sale = True
+            is_purchase = False
+        elif invoice_type == "purchase" or self.is_purchase_document():
+            is_sale = False
+            is_purchase = True
+
+        if is_sale:
+            endpoint = f"/sales_api/{fennoa_id}"
+        elif is_purchase:
+            endpoint = f"/purchases_api/{fennoa_id}"
+        else:
+            raise ValidationError(
+                _("Only sales and purchase invoices can be fetched from Fennoa.")
+            )
+
         res = self._fennoa_api_request_make(
             "GET",
-            f"/sales_api/{fennoa_id}",
+            endpoint,
             related_model=self._name,
             related_id=self.id,
         )
 
-        return res
+        if is_sale:
+            return res.get("SalesInvoice", {})
+        elif is_purchase:
+            return res.get("PurchaseInvoice", {})
 
     # endregion

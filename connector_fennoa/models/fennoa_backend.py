@@ -48,6 +48,15 @@ class FennoaBackend(models.Model):
         default=False,
     )
 
+    purchase_invoice_from_date = fields.Date(
+        string="Import Purchase Invoices From",
+        readonly=True,
+    )
+    purchase_invoice_to_date = fields.Date(
+        string="Import Purchase Invoices To",
+        readonly=True,
+    )
+
     payments_from_date = fields.Date(
         string="Import Payments From",
         readonly=True,
@@ -168,6 +177,27 @@ class FennoaBackend(models.Model):
             "params": {
                 "title": _("Import started"),
                 "message": _("Importing customers in the background..."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
+    def action_import_purchase_invoices(self):
+        """
+        Fetch all purchase invoices from Fennoa.
+        """
+        self.ensure_one()
+
+        res = self._import_purchase_invoices()
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Import started"),
+                "message": _(
+                    "Importing %s purchase invoices in the background...", len(res)
+                ),
                 "type": "success",
                 "sticky": False,
             },
@@ -320,6 +350,62 @@ class FennoaBackend(models.Model):
             endpoint = f"{endpoint}/created_after:{created_str}"
 
         res = self._fennoa_api_request_make("GET", endpoint)
+
+        return res
+
+    # -------------------------------------------------------------------------
+    # API: Purchase invoices
+    # -------------------------------------------------------------------------
+    def _import_purchase_invoices(self):
+        from_date = self.purchase_invoice_from_date
+        to_date = self.purchase_invoice_to_date
+        AccountInvoice = self.env["account.move"]
+
+        if not from_date:
+            from_date = fields.Date.today() - timedelta(days=30)
+        if not to_date:
+            to_date = fields.Date.today()
+
+        res = self.api_get_purchase_invoices(from_date, to_date)
+
+        for invoice in res:
+            values = invoice.get("PurchaseInvoice") or {}
+            fennoa_id = values.get("id")
+            desc = f"Fennoa: import purchase invoice '{fennoa_id}'"
+            AccountInvoice.with_delay(description=desc)._fennoa_import_record(
+                fennoa_id,
+                "purchase",
+            )
+
+        self.purchase_invoice_from_date = fields.Date.today()
+        return res
+
+    def api_get_purchase_invoices(self, from_date, to_date):
+        """
+        Fetch a list of purchase invoices from Fennoa.
+
+        Get purchase invoices from
+        /purchases_api/get/list?
+        """
+        self.ensure_one()
+
+        from_str = self._format_fennoa_date(from_date, "from_date") + " 00:00:00"
+        to_str = self._format_fennoa_date(to_date, "to_date") + " 23:59:59"
+        params = {
+            "createdAfter": from_str,
+            "createdBefore": to_str,
+            # TODO: configurable filter for approved invoices only
+            # "isApproved": 1,
+        }
+
+        endpoint = "/purchases_api/get/list"
+
+        res = self._fennoa_api_request_make("GET", endpoint, params=params)
+
+        if not isinstance(res, list):
+            raise ValidationError(
+                _("Fennoa API returned unexpected response for purchase invoices.")
+            )
 
         return res
 

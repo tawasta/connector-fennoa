@@ -135,7 +135,7 @@ class ApiRequestMixin(models.Model):
             external_id = None
         elif response.get("id"):
             external_id = response.get("id")
-        elif len(response) == 1:
+        elif len(response) == 1 and isinstance(list(response.values())[0], dict):
             external_id = list(response.values())[0].get("id")
         else:
             external_id = None

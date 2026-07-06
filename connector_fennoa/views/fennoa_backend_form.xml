@@ -35,7 +35,7 @@
                     </group>
 
                     <notebook>
-                        <page name="sales_invoices" string="Sales invoices">
+                        <page name="sales_invoices" string="Sales">
                             <group name="sale_invoices_group">
                                 <group
                                     name="sale_invoices_group_invoice_settings"
@@ -57,6 +57,35 @@
                                         widget="boolean_toggle"
                                     />
 
+                                </group>
+                            </group>
+                        </page>
+
+                            <page name="purchase_invoices" string="Purchases">
+                            <group name="purchase_invoices_group">
+                                <group
+                                    name="purchase_invoices_group_import"
+                                    string="Import"
+                                >
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Import purchase invoices from Fennoa
+                                    </p>
+                                    <button
+                                        name="action_import_purchase_invoices"
+                                        confirm="Are you sure you want to import purchase invoices?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Import invoices"
+                                    />
+                                </group>
+
+                                <group
+                                    name="purchase_invoices_group_invoice_settings"
+                                    string="Invoice settings"
+                                >
+                                    <field name="purchase_invoice_from_date" />
+                                    <field name="purchase_invoice_to_date" />
                                 </group>
                             </group>
                         </page>
