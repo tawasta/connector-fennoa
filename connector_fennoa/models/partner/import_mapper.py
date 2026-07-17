@@ -21,6 +21,7 @@ class FennoaPartnerImportMapper(Component):
         ("description", "comment"),
         ("website", "website"),
         ("customer_no", "ref"),
+        ("einvoice_address", "edicode"),
     ]
 
     @mapping
@@ -44,3 +45,16 @@ class FennoaPartnerImportMapper(Component):
         # Address should be split into street and street2 when necessary
         if address:
             return {"street": address}
+
+    @mapping
+    def einvoice_operator(self, record):
+        res = {}
+        einvoice_operator = record.get("einvoice_operator_id")
+        if einvoice_operator:
+            operator = self.env["res.partner.operator.einvoice"].search(
+                [("identifier", "ilike", einvoice_operator)], limit=1
+            )
+            if operator:
+                res["einvoice_operator_id"] = operator.id
+
+        return res
