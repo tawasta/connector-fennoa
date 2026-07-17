@@ -166,6 +166,9 @@ Known issues / Roadmap
 Changelog
 =========
 
+17.0.1.2.8 (2026-07-17) Fetch eInvoice address and operator for
+customers
+
 17.0.1.2.7 (2026-06-10) Improve error handling and transmit method data
 validation
 
