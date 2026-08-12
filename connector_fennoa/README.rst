@@ -166,6 +166,9 @@ Known issues / Roadmap
 Changelog
 =========
 
+17.0.1.2.9 (2026-08-12) Fetch eInvoice address and operator from parent,
+if missing
+
 17.0.1.2.8 (2026-07-17) Fetch eInvoice address and operator for
 customers
 
