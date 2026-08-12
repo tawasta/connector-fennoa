@@ -81,6 +81,7 @@ class ResPartner(models.Model):
             raise ValidationError(
                 _("Cannot import customer without Fennoa ID or customer number.")
             )
+        _logger.debug("Customer data from Fennoa: %s", customer_data)
 
         existing_partner = None
 
