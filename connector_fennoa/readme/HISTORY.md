@@ -1,3 +1,6 @@
+17.0.1.2.10 (2026-11-12)
+Add a configurable customer description
+
 17.0.1.2.9 (2026-08-12)
 Fetch eInvoice address and operator from parent, if missing
 

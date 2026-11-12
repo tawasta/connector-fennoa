@@ -1,5 +1,6 @@
 from odoo import _
 from odoo.exceptions import UserError
+from odoo.tools import html2plaintext
 
 from odoo.addons.component.core import Component
 from odoo.addons.connector.components.mapper import changed_by, mapping
@@ -37,7 +38,18 @@ class FennoaPartnerExportMapper(Component):
     @changed_by("comment")
     @mapping
     def comment(self, record):
-        return self._direct_mapping(record.comment, "description")
+        description = ""
+
+        # Customer description field can be configured in backend
+        backend = record._get_fennoa_backend()
+        field_name = backend.customer_description
+
+        if field_name:
+            field = record._fields.get("comment")
+            if field:
+                description = html2plaintext(record.comment)
+
+        return self._direct_mapping(description, "description")
 
     @changed_by("email")
     @mapping
