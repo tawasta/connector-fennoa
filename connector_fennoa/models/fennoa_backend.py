@@ -59,7 +59,8 @@ class FennoaBackend(models.Model):
 
     customer_description = fields.Selection(
         selection=[
-            ("comment", "Comment"),
+            ("empty", "Empty (send empty value)"),
+            ("comment", "Internal comment"),
         ],
         help="Field to use for customer description in Fennoa. Use empty for none",
         default="comment",

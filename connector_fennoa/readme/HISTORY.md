@@ -1,3 +1,6 @@
+17.0.1.2.11 (2026-11-19)
+Add an "empty" option for customer description
+
 17.0.1.2.10 (2026-11-12)
 Add a configurable customer description
 
