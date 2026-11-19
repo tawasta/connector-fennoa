@@ -1,9 +1,13 @@
+import logging
+
 from odoo import _
 from odoo.exceptions import UserError
 from odoo.tools import html2plaintext
 
 from odoo.addons.component.core import Component
 from odoo.addons.connector.components.mapper import changed_by, mapping
+
+_logger = logging.getLogger(__name__)
 
 
 class FennoaPartnerExportMapper(Component):
@@ -44,12 +48,24 @@ class FennoaPartnerExportMapper(Component):
         backend = record._get_fennoa_backend()
         field_name = backend.customer_description
 
-        if field_name:
-            field = record._fields.get("comment")
-            if field:
-                description = html2plaintext(record.comment)
+        if not field_name:
+            # Do nothing
+            return {}
 
-        return self._direct_mapping(description, "description")
+        if field_name == "empty":
+            # Set field as empty
+            description = ""
+        else:
+            field = record._fields.get(field_name)
+            if field:
+                description = html2plaintext(getattr(record, field_name))
+            else:
+                _logger.warning(
+                    "Trying to use non-existing field '%s' for partner description.",
+                    field_name,
+                )
+
+        return {"description": description}
 
     @changed_by("email")
     @mapping
