@@ -57,6 +57,15 @@ class FennoaBackend(models.Model):
         readonly=True,
     )
 
+    customer_description = fields.Selection(
+        selection=[
+            ("empty", "Empty (send empty value)"),
+            ("comment", "Internal comment"),
+        ],
+        help="Field to use for customer description in Fennoa. Use empty for none",
+        default="comment",
+    )
+
     # endregion fields
 
     # region compute methods

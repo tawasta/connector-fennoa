@@ -123,6 +123,38 @@
                                     -->
                                 </group>
                             </group>
+
+                            <group name="customers_export_group">
+                                <group
+                                    name="customers_export_group_export"
+                                    string="Export"
+                                >
+                                    <!--
+                                    <p class="oe_grey oe_inline" colspan="2">
+                                        Export or update all customers to Fennoa.
+                                        <br />
+                                        If customer doesn't exist, one will be created.
+                                        If customer exists (binding exists), it will be updated.
+                                    </p>
+
+                                    <button
+                                        name="action_export_customers"
+                                        confirm="Are you sure you want to export customers?"
+                                        type="object"
+                                        class="oe_highlight"
+                                        colspan="2"
+                                        string="Export customers"
+                                    />
+                                    -->
+                                </group>
+                                <group
+                                    name="products_export_group_export_settings"
+                                    string="Export settings"
+                                >
+                                    <field name="customer_description" />
+                                </group>
+
+                            </group>
                         </page>
 
                         <page name="products" string="Products">
@@ -131,6 +163,7 @@
                                     name="products_import_group_import"
                                     string="Import"
                                 >
+                                    <!--
                                     <p class="oe_grey oe_inline" colspan="2">
                                         Import or update all products from Fennoa.
                                         <br />
@@ -138,7 +171,6 @@
                                         <br />
                                         You can configure the behaviour of this button below.
                                     </p>
-                                    <!--
                                     <button
                                         name="action_import_products"
                                         confirm="Are you sure you want to import products?"
@@ -172,13 +204,13 @@
                                     name="products_export_group_export"
                                     string="Export"
                                 >
+                                    <!--
                                     <p class="oe_grey oe_inline" colspan="2">
                                         Export or update all products to Fennoa.
                                         <br />
                                         If product doesn't exist, one will be created.
                                         If product exists (binding exists), it will be updated.
                                     </p>
-                                    <!--
                                     <button
                                         name="action_export_products"
                                         confirm="Are you sure you want to export products?"
